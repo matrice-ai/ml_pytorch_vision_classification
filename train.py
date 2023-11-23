@@ -429,7 +429,11 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     actionTracker.update_status(stepCode,status,status_description)
 
     torch.save(model,'model_best.pt')
-    #actionTracker.upload_checkpoint('model_best.pth.tar')
+    try:
+        actionTracker.upload_checkpoint('model_best.pth.tar')
+        actionTracker.upload_checkpoint('model_best.pt')
+    except:
+        print('Couldn't upload model_best.pt')
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
     batch_time = AverageMeter('Time', ':6.3f')
