@@ -1,0 +1,47 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+      - "dev"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GH_ACCESS_TOKEN: ${{ secrets.ORG_GH_ACTIONS_KEY }}
+      GH_ACCESS_USER: ${{ secrets.ORG_GH_ACTIONS_USER }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Tags
+        run: echo "NOW=$(date +'%s')" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ORG_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.ORG_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Git clone with Submodule
+        run: |
+          git config --global url.https://$GH_ACCESS_USER:$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+          git clone -b dev https://github.com/matrice-ai/python-common.git ./python_common
+          git submodule update --recursive
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: pytorch-vision-imagenet
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$NOW .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$NOW
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
