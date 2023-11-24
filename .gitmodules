@@ -1,0 +1,4 @@
+[submodule "python_common"]
+	path = python_common
+	url = https://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@github.com/matrice-ai/python-common.git
+	branch = dev
