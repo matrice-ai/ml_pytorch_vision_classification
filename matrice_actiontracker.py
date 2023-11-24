@@ -6,8 +6,7 @@ client = None
 
 # ENV = os.environ['ENV']
 ENV="dev"
-access_key = "AKIAUFBIAFXV4WR3QLLY"
-secret_key = "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"
+
 
 def get_secret_from_aws(secret_name):
     global client
