@@ -4,8 +4,10 @@ from botocore.exceptions import ClientError
 secrets_dict = {}
 client = None
 
-# ENV = os.environ['ENV']
-ENV="dev"
+
+ENV = os.environ['ENV']
+access_key=os.environ['AWS_ACCESS_KEY_ID']
+secret_key=os.environ['AWS_SECRET_ACCESS_KEY']
 
 
 def get_secret_from_aws(secret_name):
