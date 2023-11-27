@@ -3,7 +3,7 @@ import boto3
 from botocore.exceptions import ClientError
 secrets_dict = {}
 client = None
-
+import os
 
 ENV = os.environ['ENV']
 access_key=os.environ['AWS_ACCESS_KEY_ID']
