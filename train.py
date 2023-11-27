@@ -366,14 +366,14 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     stepCode='MDL_TRN_DTL'
     status='OK'
     status_description='Training Dataset is loaded'
-
+    print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
 
 
     stepCode='MDL_TRN_STRT'
     status='OK'
     status_description='Model Training has started'
-
+    print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
 
     early_stopping=EarlyStopping(patience=args.patience,min_delta=args.min_delta)
@@ -425,7 +425,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     stepCode='MDL_TRN_CMPL'
     status='SUCCESS'
     status_description='Model Training is completed'
-
+    print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
 
     torch.save(model,'model_best.pt')
@@ -433,7 +433,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         actionTracker.upload_checkpoint('model_best.pth.tar')
         actionTracker.upload_checkpoint('model_best.pt')
     except:
-        print('Couldn't upload model_best.pt')
+        print("Couldn't upload model_best.pt")
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
     batch_time = AverageMeter('Time', ':6.3f')
