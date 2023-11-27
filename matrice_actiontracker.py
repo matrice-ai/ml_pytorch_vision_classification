@@ -298,11 +298,6 @@ import boto3
 from bson import ObjectId
 
 
-secret_name = "aws"
-res = json.loads(get_secret_from_aws(secret_name))
-access_key = res["access_key"]
-secret_key = res["secret_key"]
-
 def get_s3_client():
     s3_client = boto3.client('s3', aws_access_key_id=access_key,
                              aws_secret_access_key=secret_key)
