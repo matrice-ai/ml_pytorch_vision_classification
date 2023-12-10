@@ -322,22 +322,26 @@ class ActionTracker:
     def __init__(self,action_id,email,password):
 
         self.email , self.password= email,password
+        self.rpc=Rpc()
         self.action_id = ObjectId(action_id)
         self.action_id_str=str(self.action_id)
-        self.matriceModel=Model(self.action_id_str,None,email=self.email,password=self.password)
-        self.model_train_details=self.matriceModel.get_model_train(self.action_id)[0]['data']
-        self._idModelTrain=self.model_train_details['_id']
+
+
+        url = f"/internal/project/v1/action/{self.action_id_str}/details"
+        self.action_details = self.rpc.get(url)['actionDetails']
+        self._idModelTrain=self.action_details['_idModelTrain']
         self._idModelTrain_str=str(self._idModelTrain)
-        self.experiment_id=self.model_train_details['_idExperiment']
+        self.experiment_id=self.action_details['_idExperiment']
         self.model_logger=ModelLogging(self._idModelTrain_str,email=self.email,password=self.password)
-        self.rpc=Rpc()
+        
 
     def get_job_params(self):
 
 
-        self.model_config = self.model_train_details['modelConfig']
+        url = f"/internal/project/v1/action/{self.action_id_str}/details"
+        self.jobParams = self.rpc.get(url)['jobParams']
 
-        return dotdict(self.model_config)
+        return dotdict(self.jobParams)
 
 
     def update_status(self, stepCode, status, status_description):
@@ -354,9 +358,9 @@ class ActionTracker:
         x=self.rpc.put(url, payload)
 
 
-    def log_epoch_results(self,  epoch,epoch_result_dict):
+    def log_epoch_results(self,  epoch,epoch_result_list):
 
-        self.model_logger.insert_model_log_to_queue(self._idModelTrain_str,self.action_id_str,epoch,epoch_result_dict)
+        self.model_logger.insert_model_log_to_queue(self._idModelTrain_str,self.action_id_str,epoch,epoch_result_list)
 
 
 
