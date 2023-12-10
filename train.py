@@ -32,7 +32,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
-parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='654e3cf90a8dd7424c6ca6bc')
+parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='6574a7c41be52fe8c4e5bfa5')
 parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohnedmoneam@gmail.com')
 parser.add_argument('--password', help="Password of your Matrice.ai account",default='mamoez12345#')
 
@@ -114,10 +114,14 @@ def main():
 
     actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
     model_config=actionTracker.get_job_params()
-
-    args.arch=model_config.modelKey
-    args.lr=model_config.learningRate
-    args.epochs=100
+    #try:
+    #    args.arch=model_config.model_key.lower()
+    #    args.lr=model_config.learningRate
+    #except:
+    #    print('model_config.model_key.lower() is ',model_config.model_key.lower())
+    #    print('ERROR not right model_key in pytorch')
+    print('model_config is' ,model_config)
+    args.epochs=10
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -405,13 +409,13 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
                 'scheduler' : scheduler.state_dict()
             }, is_best)
 
-
-        epochDetails= {'test':[{"splitType": "train", "metric": "loss", "value":loss_train},
-                        {"splitType": "train", "metric": "acc@1", "value": acc1_train},
-                        {"splitType": "train", "metric": "acc@5", "value": acc5_train},
-                        {"splitType": "val", "metric": "loss", "value": loss_val},
-                        {"splitType": "val", "metric": "acc@1", "value": acc1_val},
-                        {"splitType": "val", "metric": "acc@5", "value": acc5_val}]}
+#[{'splitType':'test','metricName':'test','metricValue':1}]
+        epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
+                        {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
+                        {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
+                        {"splitType": "val", "metricName": "loss", "metricValue": loss_val},
+                        {"splitType": "val", "metricName": "acc@1", "metricValue": acc1_val},
+                        {"splitType": "val", "metricName": "acc@5", "metricValue": acc5_val}]
 
         actionTracker.log_epoch_results(epoch,epochDetails)
         print(epoch,epochDetails)
