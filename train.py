@@ -424,9 +424,9 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         print(epoch,epochDetails)
 
 
-        early_stopping.update(loss_val)
-        if early_stopping.stop:
-           break
+        # early_stopping.update(loss_val)
+        # if early_stopping.stop:
+        #    break
 
 
     stepCode='MDL_TRN_CMPL'
