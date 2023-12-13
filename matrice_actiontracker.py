@@ -344,12 +344,14 @@ class ActionTracker:
         return dotdict(self.jobParams)
 
 
-    def update_status(self, stepCode, status, status_description):
+    def update_status(self, action,service_name,stepCode, status, status_description):
 
         url= "/internal/project/v1/action"
 
         payload = {
             "_id":self.action_id_str,
+            "action"  : action,
+            "serviceName": service_name,
             "stepCode": stepCode,
             "status":status,
             "statusDescription":status_description,
