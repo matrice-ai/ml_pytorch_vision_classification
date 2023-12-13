@@ -373,15 +373,19 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     stepCode='MDL_TRN_DTL'
     status='OK'
     status_description='Training Dataset is loaded'
+    action='model_train
+    service_name='bg-job-scheduler
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
 
     stepCode='MDL_TRN_STRT'
     status='OK'
     status_description='Model Training has started'
+    action='model_train
+    service_name='bg-job-scheduler
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
     early_stopping=EarlyStopping(patience=args.patience,min_delta=args.min_delta)
 
@@ -432,8 +436,10 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     stepCode='MDL_TRN_CMPL'
     status='SUCCESS'
     status_description='Model Training is completed'
+    action='model_train
+    service_name='bg-job-scheduler
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
     torch.save(model,'model_best.pt')
     try:
