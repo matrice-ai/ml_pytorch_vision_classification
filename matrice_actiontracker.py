@@ -329,9 +329,15 @@ class ActionTracker:
 
         url = f"/internal/project/v1/action/{self.action_id_str}/details"
         self.action_details = self.rpc.get(url)['actionDetails']
-        self._idModelTrain=self.action_details['_idModelTrain']
-        self._idModelTrain_str=str(self._idModelTrain)
-        self.experiment_id=self.action_details['_idExperiment']
+       
+        try:
+            self._idModel=self.action_details['_idModelTrain']
+            self._idModel_str=str(self._idModel)
+            self.experiment_id=self.action_details['_idExperiment']
+        except:
+            self._idModel=self.action_details['_idModel']
+            self._idModel_str=str(self._idModel)
+            
         self.model_logger=ModelLogging(self._idModelTrain_str,email=self.email,password=self.password)
         
 
@@ -383,17 +389,25 @@ class ActionTracker:
         print(s3_location)
         #self.rpc.put(url,Payload)
 
+    def save_evaluation_results(self, data_split, list_of_result_dicts):
+        # {
+        #     splitType
+        #     metricName
+        #     metricValue
+        # }
 
-    # def save_evaluation_results(self, data_split, result_dict):
-    #     url= 'model/v1/save_evaluation_results'
-    #     Payload = {
-    #         "_idModelTrain": self._idModelTrain,
-    #         "_idDataset": self._idDataset, # What if NONE
-    #         "datasetVersion": self.datasetVersion,
-    #         "splitType": data_split,
-    #         "results": result_dict
-    #     }
-    #     # "results": {
-    #     # "accuracy" : 0.23,
-    #     # "precision": 0.45,}
-    #     self.rpc.put(url,Payload)
+        url= 'v1/model/add_eval_results'
+       
+
+        Payload = {
+                "_idModel":self.action_details['_idModel'],
+                "_idDataset":self.action_details['_idDataset'],
+                "_idProject":"6576d632686b6c962d64786d",
+                "isOptimized": False,
+                "runtimeFramework":"Pytorch",
+                "datasetVersion":self.action_details['datasetVersion'],
+                "splitTypes":data_split,
+                "evalResults":list_of_result_dicts
+            }
+
+        self.rpc.post(url,Payload)
