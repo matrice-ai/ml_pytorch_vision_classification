@@ -699,6 +699,9 @@ def pipeline_coreml(model, im, file, names, y, prefix=colorstr('CoreML Pipeline:
 
 @smart_inference_mode()
 def run(
+        action_id,
+        email,
+        password,
         data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
         weights=ROOT / 'model.pt',  # weights path
         imgsz=(640, 640),  # image (height, width)
@@ -874,8 +877,7 @@ def parse_opt(known=False):
 
 def main(opt):
 
-    for opt.weights in (opt.weights if isinstance(opt.weights, list) else [opt.weights]):
-        run(**vars(opt))
+    run(**vars(opt))
 
 
 if __name__ == '__main__':
