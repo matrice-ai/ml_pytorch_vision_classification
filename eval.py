@@ -25,7 +25,7 @@ from torch.utils.data import Subset
 
 
 from matrice_actiontracker import ActionTracker
-
+from python_common.services.s3 import download_from_s3
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -117,7 +117,9 @@ def main():
     actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
 
     model_config=actionTracker.get_job_params()
-
+    
+    download_from_s3(f'{actionTracker._idModel_str}/model_best.pt','matrice.dev.models','model.pt')
+    
     print('model_config is' ,model_config)
 
     _idDataset=model_config['_idDataset']
