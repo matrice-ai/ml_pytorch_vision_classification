@@ -328,7 +328,8 @@ class ActionTracker:
 
 
         url = f"/internal/project/v1/action/{self.action_id_str}/details"
-        self.action_details = self.rpc.get(url)['actionDetails']
+        self.action_doc=self.rpc.get(url)
+        self.action_details = self.action_doc['actionDetails']
        
         try:
             self._idModel=self.action_details['_idModelTrain']
@@ -338,7 +339,7 @@ class ActionTracker:
             self._idModel=self.action_details['_idModel']
             self._idModel_str=str(self._idModel)
             
-        self.model_logger=ModelLogging(self._idModelTrain_str,email=self.email,password=self.password)
+        self.model_logger=ModelLogging(self._idModel_str,email=self.email,password=self.password)
         
 
     def get_job_params(self):
@@ -368,46 +369,49 @@ class ActionTracker:
 
     def log_epoch_results(self,  epoch,epoch_result_list):
 
-        self.model_logger.insert_model_log_to_queue(self._idModelTrain_str,self.action_id_str,epoch,epoch_result_list)
+        self.model_logger.insert_model_log_to_queue(self._idModel_str,self.action_id_str,epoch,epoch_result_list)
 
 
 
     def upload_checkpoint(self,checkpoint_path,best_epoch_num=0 ):
 
-        url= 'model/v1/update_storage_path'
+        # url= '/model/v1/update_storage_path'
 
-        self.baseModelStoragePath_bucket=self.matriceModel.get_experiment_storage_path(self.experiment_id)[0]['data'].split('.com/')[-1]
-                                            # Hard coded self.baseModelStoragePath_bucket instead of 'dev.images.download.speed.test' beacuse problem in dev.models
-        s3_location=upload_to_s3(checkpoint_path, 'dev.images.download.speed.test', f'{self._idModelTrain_str}/{checkpoint_path.split("/")[-1]}')
+        # self.baseModelStoragePath_bucket=self.matriceModel.get_experiment_storage_path(self.experiment_id)[0]['data'].split('.com/')[-1]
+                                            # Hard coded self.baseModelStoragePath_bucket instead of 'matrice.dev.models' 
+        s3_location=upload_to_s3(checkpoint_path, 'matrice.dev.models', f'{self._idModel_str}/{checkpoint_path.split("/")[-1]}')
 
-        Payload = {
-            "_idModelTrain": self._idModelTrain,
-            "bestEpoch": best_epoch_num,
-            "storage_path":s3_location
-        }
+        # Payload = {
+        #     "_idModelTrain": self._idModel,
+        #     "bestEpoch": best_epoch_num,
+        #     "storage_path":s3_location
+        # }
 
+        print("MODEL UPLOADED TO")
         print(s3_location)
         #self.rpc.put(url,Payload)
 
-    def save_evaluation_results(self, data_split, list_of_result_dicts):
+    def save_evaluation_results(self,list_of_result_dicts):
         # {
         #     splitType
+        #     category
         #     metricName
         #     metricValue
         # }
 
-        url= 'v1/model/add_eval_results'
-       
+        url= '/v1/model/add_eval_results'
+
 
         Payload = {
                 "_idModel":self.action_details['_idModel'],
                 "_idDataset":self.action_details['_idDataset'],
-                "_idProject":"6576d632686b6c962d64786d",
-                "isOptimized": False,
-                "runtimeFramework":"Pytorch",
+                "_idProject":self.action_doc['_idProject'],
+                "isOptimized": self.action_details['isOptimized'],
+                "runtimeFramework":self.action_details['runtimeFramework'],
                 "datasetVersion":self.action_details['datasetVersion'],
-                "splitTypes":data_split,
+                "splitTypes":'',
                 "evalResults":list_of_result_dicts
             }
 
-        self.rpc.post(url,Payload)
+        x=self.model_logger.rpc.post(path=url,payload=Payload)
+
