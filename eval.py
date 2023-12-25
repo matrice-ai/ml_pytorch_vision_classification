@@ -336,7 +336,15 @@ def get_evaluation_results(split,output,target):
 
         results=[]
 
-        acc_1,acc_5=accuracy(output,target,topk=(1,5))
+        acc1 = accuracy(output, target, topk=(1,))[0]
+
+        try:
+            acc5 = accuracy(output, target, topk=(5,))[0]
+        except:
+            if torch.cuda.is_available():
+                acc5 = torch.tensor([100]).cuda(args.gpu)
+            else:
+                acc5 = torch.tensor([100])
 
         results.append({
             "category":"",
