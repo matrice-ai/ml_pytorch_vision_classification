@@ -315,6 +315,14 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     payload=[]
     criterion = nn.CrossEntropyLoss().to(device)
 
+    stepCode='MDL_EVL_STRT'
+    status='OK'
+    status_description='Model Evaluation has started'
+    action='model_eval'
+    service_name='bg-job-scheduler'
+    print(status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
+    
     if 'train' in args.splits:
         payload+=get_metrics('train',train_loader, model, criterion)
         #actionTracker.save_evaluation_results(payload)
@@ -326,6 +334,16 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         payload+=get_metrics('test',test_loader, model, criterion)
         #actionTracker.save_evaluation_results(payload)
 
+    actionTracker.save_evaluation_results(payload)
+    
+    stepCode='MDL_EVL_CMPL'
+    status='SUCCESS'
+    status_description='Model Evaluation is completed'
+    action='model_eval'
+    service_name='bg-job-scheduler'
+    print(status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
+    
     print(payload)
 
 
