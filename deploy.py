@@ -19,8 +19,8 @@ class MatriceModel:
         
         self.action_id = action_id
         self.rpc=Rpc()
-        self.action_details=self.rpc.get("/internal/project/v1/action/{self.action_id}/details")
-      
+        self.action_details=self.rpc.get(f"/internal/project/v1/action/{self.action_id}/details")
+        print(self.action_details)
         self.rpc=RPC("mohned.moneam@matrice.ai",'mamoez12345#')
         self._idDeploymentInstance=self.action_details['_idService']
         self._idDeployment=self.action_details['actionDetails']['_idDeployment']
@@ -32,6 +32,7 @@ class MatriceModel:
         self.shutdown_on_idle_threshold = 3000
         self.app = FastAPI()
         self.ip = self.get_ip()
+        self.port=port
        # self.run_shutdown_checker()
         
         @self.app.post("/inference/")
@@ -45,7 +46,9 @@ class MatriceModel:
                 return JSONResponse(content=jsonable_encoder({"status": 0, "message": "Some error occurred"}), status_code=500)
 
 
-    def run_api(self, host="0.0.0.0", port=80):
+    def run_api(self,):
+        host="0.0.0.0"
+        port=self.port
         uvicorn.run(self.app, host=host, port=port)
         self.update_deployment_address()
 
@@ -115,5 +118,11 @@ class MatriceModel:
         
         self.rpc.put(path=url,payload=payload)
 
-x=MatriceModel("",8000)
-x.run_api()
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 deploy.py <action_status_id>")
+        sys.exit(1)
+    
+    action_status_id = sys.argv[1]
+    x=MatriceModel(action_status_id,8000)
+    x.run_api()
