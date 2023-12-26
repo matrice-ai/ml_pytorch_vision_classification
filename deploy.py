@@ -47,7 +47,7 @@ class MatriceModel:
 
     def run_api(self, host="0.0.0.0", port=80):
         uvicorn.run(self.app, host=host, port=port)
-
+        self.update_deployment_address()
 
     def get_ip(self):
         external_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
@@ -100,7 +100,7 @@ class MatriceModel:
         t1.start()
 
 
-    def update_deployment_info(self):
+    def update_deployment_address(self):
         ip = self.get_ip()
         port = self.port
         
