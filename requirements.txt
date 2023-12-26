@@ -12,7 +12,7 @@ exceptiongroup==1.2.0
 h11==0.14.0
 idna==3.6
 importlib-metadata==6.7.0
-numpy==1.21.6
+numpy==1.22.0
 Pillow==9.5.0
 pydantic==2.5.2
 pydantic_core==2.14.5
