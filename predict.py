@@ -37,4 +37,4 @@ def predict(model,image_bytes):
         # For example, you might want to return the class with the highest probability
         _, predicted_class = torch.max(output, 1)
 
-        return {"category": predicted_class.item(),confidence:"99.9"}
+        return {"category": predicted_class.item(),"confidence":99.9}
