@@ -24,7 +24,7 @@ starlette==0.27.0
 torch==1.13.1
 torchvision==0.14.1
 typing_extensions==4.7.1
-urllib3==1.26.6
+urllib3==1.26.18
 uvicorn==0.22.0
 zipp==3.15.0
 fastapi
