@@ -3,12 +3,20 @@ from io import BytesIO
 import torch
 from torchvision import transforms
 import numpy as np
+from python_common.services.s3 import download_from_s3
 
 
-
-def load_model():
+def load_model(model_id):
     #model=torch.load(model_path)
-    model=torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+    
+    try:
+        download_from_s3(f'{model_id}/model_best.pt','matrice.dev.models','model.pt')
+        model=torch.load('model.pt')
+        
+    except:
+        print("not able to load model weights will use pretrained resnet18")
+        model=torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+        
     if torch.cuda.is_available():
         model.cuda(0)
     model.eval()
