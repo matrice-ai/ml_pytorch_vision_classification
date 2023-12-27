@@ -7,11 +7,13 @@ from python_common.services.s3 import download_from_s3
 
 
 def load_model(model_id):
-    #model=torch.load(model_path)
     
     try:
         download_from_s3(f'{model_id}/model_best.pt','matrice.dev.models','model.pt')
-        model=torch.load('model.pt')
+        model = torch.load('model.pt', map_location='cpu')
+        
+        if str(type(model)) == "<class 'torch.nn.parallel.data_parallel.DataParallel'>":
+            model=torch.load('model.pt', map_location='cpu').module
         
     except:
         print("not able to load model weights will use pretrained resnet18")
