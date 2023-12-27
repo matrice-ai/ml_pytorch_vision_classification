@@ -224,6 +224,9 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         val_dataset, batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True, sampler=val_sampler)
     
+    # Get the mapping from class indices to labels
+    index_to_labels = {idx: str(label) for idx, label in enumerate(train_loader.classes)}
+    actionTracker.add_index_to_category(index_to_labels)
 
     # create model
     if args.pretrained:
