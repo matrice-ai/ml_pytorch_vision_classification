@@ -414,4 +414,11 @@ class ActionTracker:
             }
 
         x=self.model_logger.rpc.post(path=url,payload=Payload)
+        
+    def add_index_to_category(self,indexToCat):
+        
+        url=f'/v1/model/{self._idModel}/update_index_to_cat'
 
+        payload={"indexToCat":indexToCat}
+        
+        self.model_logger.rpc.put(path=url ,payload=payload)
