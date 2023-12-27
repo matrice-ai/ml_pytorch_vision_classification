@@ -4,7 +4,7 @@ import torch
 from torchvision import transforms
 import numpy as np
 from python_common.services.s3 import download_from_s3
-
+import torch.nn.functional as F
 
 def load_model(model_id):
     
@@ -43,8 +43,12 @@ def predict(model,image_bytes):
         with torch.no_grad():
             output = model(input_tensor)
 
-        # Process the output as needed
-        # For example, you might want to return the class with the highest probability
-        _, predicted_class = torch.max(output, 1)
+    
+        # Apply softmax to get probabilities
+        probabilities = F.softmax(output, dim=1)
+    
+        # Get the confidence for the predicted class
+        predicted_class = torch.argmax(output, 1).item()
+        confidence = round(probabilities[0, predicted_class].item(), 2)
 
-        return {"category": predicted_class.item(),"confidence":99.9}
+        return {"category": str(predicted_class), "confidence": confidence}
