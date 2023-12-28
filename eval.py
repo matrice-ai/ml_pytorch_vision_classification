@@ -191,8 +191,10 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         print("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch]()
 
-
-    model=torch.load('model.pt')
+    model = torch.load('model.pt', map_location='cpu')
+    
+    if str(type(model)) == "<class 'torch.nn.parallel.data_parallel.DataParallel'>":
+        model=torch.load('model.pt', map_location='cpu').module
 
 
     if not torch.cuda.is_available() and not torch.backends.mps.is_available():
