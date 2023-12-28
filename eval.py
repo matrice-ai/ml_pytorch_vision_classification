@@ -337,14 +337,14 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     index_to_labels=get_index_to_labels()
     
     if 'train' in args.splits and os.path.exists(traindir):
-        payload+=get_metrics('train',train_loader, model)
+        payload+=get_metrics('train',train_loader, model,index_to_labels)
 
     if 'val' in args.splits and os.path.exists(valdir):
-        payload+=get_metrics('val',val_loader, model)
+        payload+=get_metrics('val',val_loader, model,index_to_labels)
 
 
     if 'test' in args.splits and os.path.exists(testdir):
-        payload+=get_metrics('test',test_loader, model)
+        payload+=get_metrics('test',test_loader, model,index_to_labels)
 
 
     actionTracker.save_evaluation_results(payload)
@@ -363,7 +363,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
 
 from python_common.model_utils.metrics.classificationmetrics import accuracy,precision,recall,f1_score,specificity,confusion_matrix_per_class,confusion_matrix
 
-def get_evaluation_results(split,output,target):
+def get_evaluation_results(split,output,target,index_to_labels):
     
         global index_to_labels
     
@@ -430,7 +430,7 @@ def get_evaluation_results(split,output,target):
 
 
 
-def get_metrics(split,data_loader, model):
+def get_metrics(split,data_loader, model,index_to_labels):
 
     def run_validate(split,loader):
         with torch.no_grad():
@@ -444,7 +444,7 @@ def get_metrics(split,data_loader, model):
                 output = model(images)
                 #loss = criterion(output, target)
 
-                metrics=get_evaluation_results(split,output,target)
+                metrics=get_evaluation_results(split,output,target,index_to_labels)
                 # metrics.append({
                 #     "category":"",
                 #     "splitType":split,
