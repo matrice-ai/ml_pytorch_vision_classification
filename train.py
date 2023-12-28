@@ -188,6 +188,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     else:
         traindir = os.path.join(args.data, 'train')
         valdir = os.path.join(args.data, 'val')
+        testdir = os.path.join(args.data, 'test')
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
@@ -225,7 +226,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         num_workers=args.workers, pin_memory=True, sampler=val_sampler)
     
     # Get the mapping from class indices to labels
-    index_to_labels = {idx: str(label) for idx, label in enumerate(train_dataset.classes)}
+    index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_dataset.classes)}
     actionTracker.add_index_to_category(index_to_labels)
 
     # create model
@@ -426,7 +427,6 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
                 'scheduler' : scheduler.state_dict()
             }, is_best)
 
-#[{'splitType':'test','metricName':'test','metricValue':1}]
         epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
                         {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
                         {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
@@ -442,7 +442,6 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         # if early_stopping.stop:
         #    break
 
-
     stepCode='MDL_TRN_CMPL'
     status='SUCCESS'
     status_description='Model Training is completed'
@@ -452,12 +451,47 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
     torch.save(model,'model_best.pt')
+    
     try:
         actionTracker.upload_checkpoint('model_best.pth.tar')
         actionTracker.upload_checkpoint('model_best.pt')
     except:
         print("Couldn't upload model_best.pt")
 
+    from eval import get_metrics
+
+    payload=[]
+    
+    if os.path.exists(traindir):
+        payload+=get_metrics('train',train_loader, model,index_to_labels)
+
+    if  os.path.exists(valdir):
+        payload+=get_metrics('val',val_loader, model,index_to_labels)
+
+    if  os.path.exists(testdir):
+        
+        test_dataset = datasets.ImageFolder(
+            testdir,
+            transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+        
+        if args.distributed:
+            test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset, shuffle=False, drop_last=True)
+        else:
+            test_sampler=None
+        
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset, batch_size=args.batch_size, shuffle=False,
+            num_workers=args.workers, pin_memory=True, sampler=test_sampler)
+
+        payload+=get_metrics('test',test_loader, model,index_to_labels)
+    
+    actionTracker.save_evaluation_results(payload)
+    
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
