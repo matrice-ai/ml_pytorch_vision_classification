@@ -380,14 +380,14 @@ def get_evaluation_results(split,output,target):
                 acc5 = torch.tensor([100])
 
         results.append({
-            "category":"",
+            "category":"all",
              "splitType":split,
              "metricName":"acc_1",
             "metricValue":float(acc1.item())
          })
 
         results.append({
-            "category":"",
+            "category":"all",
              "splitType":split,
              "metricName":"acc_5",
             "metricValue":float(acc5.item())
@@ -430,7 +430,7 @@ def get_evaluation_results(split,output,target):
 
 
 
-def get_metrics(split,val_loader, model):
+def get_metrics(split,data_loader, model):
 
     def run_validate(split,loader):
         with torch.no_grad():
@@ -455,7 +455,7 @@ def get_metrics(split,val_loader, model):
                 return metrics
     # switch to evaluate mode
     model.eval()
-    metrics=run_validate(split,val_loader)
+    metrics=run_validate(split,data_loader)
     return metrics
 
 
