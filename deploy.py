@@ -29,11 +29,11 @@ class MatriceModel:
         
         self.model = None
         self.last_no_inference_time = -1
-        self.shutdown_on_idle_threshold = 3000
+        self.shutdown_on_idle_threshold = int(self.action_details['actionDetails']['shutdownThreshold'] *60 )
         self.app = FastAPI()
         self.ip = self.get_ip()
         self.port=port
-       # self.run_shutdown_checker()
+        self.run_shutdown_checker()
         
         @self.app.post("/inference/")
         async def serve_inference(image: UploadFile = File(...)):
@@ -83,6 +83,7 @@ class MatriceModel:
             if elapsed_time > int(self.shutdown_on_idle_threshold):
                 try:
                     print('Shutting down due to idle time exceeding the threshold.')
+                    self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
                     os.system('shutdown now')
                 except:
                     print("Unable to process shutdown")
