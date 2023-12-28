@@ -255,7 +255,8 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-    if 'train' in args.splits:
+    if 'train' in args.splits and os.path.exists(traindir):
+        
         train_dataset = datasets.ImageFolder(
             traindir,
             transforms.Compose([
@@ -273,7 +274,8 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
         train_loader = torch.utils.data.DataLoader(
             train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
             num_workers=args.workers, pin_memory=True, sampler=train_sampler)
-    if 'val' in args.splits:
+        
+    if 'val' in args.splits and os.path.exists(valdir):
         val_dataset = datasets.ImageFolder(
             valdir,
             transforms.Compose([
@@ -292,7 +294,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
             val_dataset, batch_size=args.batch_size, shuffle=False,
             num_workers=args.workers, pin_memory=True, sampler=val_sampler)
         
-    if 'test' in args.splits:
+    if 'test' in args.splits and os.path.exists(testdir):
         test_dataset = datasets.ImageFolder(
             testdir,
             transforms.Compose([
@@ -323,14 +325,14 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
     
-    if 'train' in args.splits:
+    if 'train' in args.splits and os.path.exists(traindir):
         payload+=get_metrics('train',train_loader, model, criterion)
         #actionTracker.save_evaluation_results(payload)
-    if 'val' in args.splits:
+    if 'val' in args.splits and os.path.exists(valdir):
         payload+=get_metrics('val',val_loader, model, criterion)
         #actionTracker.save_evaluation_results(payload)
 
-    if 'test' in args.splits:
+    if 'test' in args.splits and os.path.exists(testdir):
         payload+=get_metrics('test',test_loader, model, criterion)
         #actionTracker.save_evaluation_results(payload)
 
@@ -368,14 +370,14 @@ def get_evaluation_results(split,output,target):
             "category":"",
              "splitType":split,
              "metricName":"acc_1",
-            "metricValue":float(acc_1.item())
+            "metricValue":float(acc1.item())
          })
 
         results.append({
             "category":"",
              "splitType":split,
              "metricName":"acc_5",
-            "metricValue":float(acc_5.item())
+            "metricValue":float(acc5.item())
          })
 
         for name,value in precision(output,target).items():
