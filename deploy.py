@@ -84,6 +84,7 @@ class MatriceModel:
                 try:
                     print('Shutting down due to idle time exceeding the threshold.')
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
+                    time.sleep(10)
                     os.system('shutdown now')
                 except:
                     print("Unable to process shutdown")
