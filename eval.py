@@ -326,17 +326,26 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     service_name='bg-job-scheduler'
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
+
+    def get_index_to_labels():
+        global traindir
+        dataset=datasets.ImageFolder(traindir)
+        # Get the mapping from class indices to labels
+        index_to_labels = {str(idx): str(label) for idx, label in enumerate(dataset.classes)}
+        return index_to_labels
+
+    index_to_labels=get_index_to_labels()
     
     if 'train' in args.splits and os.path.exists(traindir):
-        payload+=get_metrics('train',train_loader, model, criterion)
-        #actionTracker.save_evaluation_results(payload)
+        payload+=get_metrics('train',train_loader, model)
+
     if 'val' in args.splits and os.path.exists(valdir):
-        payload+=get_metrics('val',val_loader, model, criterion)
-        #actionTracker.save_evaluation_results(payload)
+        payload+=get_metrics('val',val_loader, model)
+
 
     if 'test' in args.splits and os.path.exists(testdir):
-        payload+=get_metrics('test',test_loader, model, criterion)
-        #actionTracker.save_evaluation_results(payload)
+        payload+=get_metrics('test',test_loader, model)
+
 
     actionTracker.save_evaluation_results(payload)
     
@@ -355,7 +364,9 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
 from python_common.model_utils.metrics.classificationmetrics import accuracy,precision,recall,f1_score,specificity,confusion_matrix_per_class,confusion_matrix
 
 def get_evaluation_results(split,output,target):
-
+    
+        global index_to_labels
+    
         results=[]
 
         acc1 = accuracy(output, target, topk=(1,))[0]
@@ -384,7 +395,7 @@ def get_evaluation_results(split,output,target):
 
         for name,value in precision(output,target).items():
             results.append({
-            "category":str(name),
+            "category": index_to_labels[str(name)],
              "splitType":split,
              "metricName":"precision",
             "metricValue":float(value)
@@ -393,7 +404,7 @@ def get_evaluation_results(split,output,target):
 
         for name,value in f1_score(output,target).items():
             results.append({
-            "category":str(name),
+            "category": index_to_labels[str(name)],
              "splitType":split,
              "metricName":"f1_score",
             "metricValue":float(value)
@@ -401,7 +412,7 @@ def get_evaluation_results(split,output,target):
 
         for name,value in recall(output,target).items():
             results.append({
-            "category":str(name),
+            "category": index_to_labels[str(name)],
              "splitType":split,
              "metricName":"recall",
             "metricValue":float(value)
@@ -409,7 +420,7 @@ def get_evaluation_results(split,output,target):
 
         for name,value in specificity(output,target).items():
             results.append({
-            "category":str(name),
+            "category": index_to_labels[str(name)],
              "splitType":split,
              "metricName":"specificity",
             "metricValue":float(value)
@@ -419,7 +430,7 @@ def get_evaluation_results(split,output,target):
 
 
 
-def get_metrics(split,val_loader, model, criterion):
+def get_metrics(split,val_loader, model):
 
     def run_validate(split,loader):
         with torch.no_grad():
@@ -431,15 +442,15 @@ def get_metrics(split,val_loader, model, criterion):
                 if torch.cuda.is_available():
                     target = target.cuda(0, non_blocking=True)
                 output = model(images)
-                loss = criterion(output, target)
+                #loss = criterion(output, target)
 
                 metrics=get_evaluation_results(split,output,target)
-                metrics.append({
-                    "category":"",
-                    "splitType":split,
-                    "metricName":"loss",
-                    "metricValue":loss.item()
-                })
+                # metrics.append({
+                #     "category":"",
+                #     "splitType":split,
+                #     "metricName":"loss",
+                #     "metricValue":loss.item()
+                # })
 
                 return metrics
     # switch to evaluate mode
