@@ -403,11 +403,11 @@ class ActionTracker:
 
 
         Payload = {
-                "_idModel":self.action_details['_idModel'],
+                "_idModel":self._idModel,
                 "_idDataset":self.action_details['_idDataset'],
                 "_idProject":self.action_doc['_idProject'],
-                "isOptimized": self.action_details['isOptimized'],
-                "runtimeFramework":self.action_details['runtimeFramework'],
+                "isOptimized": self.action_details.get('isOptimized',False),
+                "runtimeFramework":self.action_details.get('runtimeFramework',"Pytorch"),
                 "datasetVersion":self.action_details['datasetVersion'],
                 "splitTypes":'',
                 "evalResults":list_of_result_dicts
