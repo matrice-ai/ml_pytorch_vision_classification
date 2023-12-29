@@ -87,6 +87,7 @@ class MatriceModel:
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
                     time.sleep(10)
                     os.system('shutdown now')
+                    sys.exit(0)
                 except:
                     print("Unable to process shutdown")
                 sys.exit(1)
