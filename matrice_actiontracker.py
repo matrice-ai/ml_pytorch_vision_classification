@@ -255,40 +255,6 @@ class ModelLogging:
 
         return resp, error, message
 
-class Model:
-
-    def __init__(self, project_id, model_id=None, email="", password=""):
-
-        self.project_id = project_id
-        self.model_id = model_id
-        self.rpc = RPC(email, password)
-
-    def get_model_train(self, action_status_id):
-
-        path = f"/v1/model/action_status/{action_status_id}"
-        resp = self.rpc.get(path=path)
-        if resp.get("success"):
-            error = None
-            message = "Model Train fetched successfully"
-        else:
-            error = resp.get("message")
-            message = "Could not fetch models train"
-
-        return resp, error, message
-    
-    def get_experiment_storage_path(self, experiment_id):
-
-        path = f"/v1/model/experiment/{experiment_id}/storage_path"
-        resp = self.rpc.get(path=path)
-        if resp.get("success"):
-            error = None
-            message = "Storage path fetched successfully"
-        else:
-            error = resp.get("message")
-            message = "Could not fetch the storage path"
-    
-        return resp, error, message
-
 
 import os
 import requests
