@@ -88,8 +88,8 @@ class MatriceModel:
                     time.sleep(10)
                     os.system('shutdown now')
                     sys.exit(0)
-                except:
-                    print("Unable to process shutdown")
+                except Exception as e:
+                    print(f"Error during shutdown: {e}")
                 sys.exit(1)
             else:
                 print('Time since last inference:', elapsed_time)
