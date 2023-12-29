@@ -105,7 +105,7 @@ class MatriceModel:
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
                     self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
-                    #os.system('shutdown now')
+                    os.system('exit')
                     sys.exit(0)
                 except Exception as e:
                     print(f"Error during shutdown: {e}")
