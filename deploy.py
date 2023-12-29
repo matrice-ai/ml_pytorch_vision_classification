@@ -19,17 +19,18 @@ class MatriceModel:
         
         self.action_id = action_id
         self.rpc=Rpc()
-        self.action_details=self.rpc.get(f"/internal/project/v1/action/{self.action_id}/details")
+        self.action_doc=self.rpc.get(f"/internal/project/v1/action/{self.action_id}/details")
+        self.action_details=self.action_doc['actionDetails']
         print(self.action_details)
         self.rpc=RPC("mohned.moneam@matrice.ai",'mamoez12345#')
         self._idDeploymentInstance=self.action_details['_idService']
-        self._idDeployment=self.action_details['actionDetails']['_idDeployment']
-        self.model_id=self.action_details['actionDetails']['_idModelDeploy']
+        self._idDeployment=self.action_details['_idDeployment']
+        self.model_id=self.action_details['_idModelDeploy']
         
         
         self.model = None
         self.last_no_inference_time = -1
-        self.shutdown_on_idle_threshold = int(self.action_details['actionDetails']['shutdownThreshold']) *60 
+        self.shutdown_on_idle_threshold = int(self.action_details['shutdownThreshold']) *60 
         self.app = FastAPI()
         self.ip = self.get_ip()
         self.port=port
