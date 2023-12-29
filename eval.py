@@ -365,7 +365,7 @@ from python_common.model_utils.metrics.classificationmetrics import accuracy,pre
 
 def get_evaluation_results(split,output,target,index_to_labels):
     
-        global index_to_labels
+
     
         results=[]
 
