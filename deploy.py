@@ -98,7 +98,7 @@ class MatriceModel:
     def shutdown_checker(self):
         while True:
             self.trigger_shutdown_if_needed()
-            time.sleep(60)
+            time.sleep(10)
 
 
     def run_shutdown_checker(self):
