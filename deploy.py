@@ -18,8 +18,8 @@ class MatriceModel:
     def __init__(self, action_id, port):
         
         self.action_id = action_id
-        self.rpc=Rpc()
-        self.action_doc=self.rpc.get(f"/internal/project/v1/action/{self.action_id}/details")
+        self.internal_rpc=Rpc()
+        self.action_doc=self.internal_rpc.get(f"/internal/project/v1/action/{self.action_id}/details")
         self.action_details=self.action_doc['actionDetails']
         print(self.action_details)
         self.rpc=RPC("mohned.moneam@matrice.ai",'mamoez12345#')
@@ -49,9 +49,13 @@ class MatriceModel:
 
     def run_api(self,):
         host="0.0.0.0"
-        port=self.port
+        port=80
         self.update_deployment_address()
-        uvicorn.run(self.app, host=host, port=port)
+        try:
+            self.update_status("deploy_add","deployment","MDL_DPL_STR", "OK", "Model deployment started")
+            uvicorn.run(self.app, host=host, port=port)
+        except:
+            self.update_status("deploy_add","deployment","ERROR", "ERROR", "Model deployment ERROR")
 
 
     def get_ip(self):
@@ -74,7 +78,21 @@ class MatriceModel:
         except Exception as e:
             print(f"ERROR: {e}")
             return None, False
+            
+    def update_status(self, action,service_name,stepCode, status, status_description):
 
+        url= "/internal/project/v1/action"
+    
+        payload = {
+            "_id":self.action_id,
+            "action"  : action,
+            "serviceName": service_name,
+            "stepCode": stepCode,
+            "status":status,
+            "statusDescription":status_description,
+        }
+    
+        self.internal_rpc.put(url, payload)
 
     def trigger_shutdown_if_needed(self):
         if self.last_no_inference_time == -1:
@@ -85,8 +103,9 @@ class MatriceModel:
                 try:
                     print('Shutting down due to idle time exceeding the threshold.')
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
+                    self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
-                    os.system('shutdown now')
+                    #os.system('shutdown now')
                     sys.exit(0)
                 except Exception as e:
                     print(f"Error during shutdown: {e}")
@@ -124,10 +143,11 @@ class MatriceModel:
         self.rpc.put(path=url,payload=payload)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 deploy.py <action_status_id>")
+    if len(sys.argv) != 3:
+        print("Usage: python3 deploy.py <action_status_id> <port>")
         sys.exit(1)
     
     action_status_id = sys.argv[1]
-    x=MatriceModel(action_status_id,80)
+    port=sys.argv[2]
+    x=MatriceModel(action_status_id,port)
     x.run_api()
