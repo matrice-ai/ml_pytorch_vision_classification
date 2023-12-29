@@ -106,7 +106,7 @@ class MatriceModel:
                     self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
                     #os.system('exit')
-                    sys.exit(0)
+                    sys.exit()
                 except Exception as e:
                     print(f"Error during shutdown: {e}")
                 sys.exit(1)
