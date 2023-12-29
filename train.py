@@ -426,6 +426,12 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
+                    
+            if str(type(model)) == "<class 'torch.nn.parallel.data_parallel.DataParallel'>":
+                model_best=model.module
+            else:
+                model_best=model
+            torch.save(model_best,'model_best.pt')
 
         epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
                         {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
@@ -450,7 +456,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
-    torch.save(model,'model_best.pt')
+    
     
     try:
         actionTracker.upload_checkpoint('model_best.pth.tar')
