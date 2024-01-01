@@ -105,11 +105,10 @@ class MatriceModel:
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
                     self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
-                    #os.system('exit')
-                    sys.exit()
+                    os._exit(0)
                 except Exception as e:
                     print(f"Error during shutdown: {e}")
-                sys.exit(1)
+                os._exit(1)
             else:
                 print('Time since last inference:', elapsed_time)
                 print('Time left to shutdown:', int(self.shutdown_on_idle_threshold) - elapsed_time)
