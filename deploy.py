@@ -33,7 +33,7 @@ class MatriceModel:
         self.shutdown_on_idle_threshold = int(self.action_details['shutdownThreshold']) *60 
         self.app = FastAPI()
         self.ip = self.get_ip()
-        self.port=port
+        self.port=int(port)
         self.run_shutdown_checker()
         
         @self.app.post("/inference/")
