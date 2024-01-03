@@ -730,7 +730,7 @@ def run(
 
     model_config=actionTracker.get_job_params()
     
-    download_from_s3(f'{actionTracker._idModel_str}/model_best.pt','matrice.dev.models','model.pt')
+    weights=download_from_s3(f'{actionTracker._idModel_str}/model_best.pt','matrice.dev.models','model.pt')
     
     print('model_config is' ,model_config)
 
