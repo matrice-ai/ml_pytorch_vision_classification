@@ -19,7 +19,7 @@ class MatriceModel:
         
         self.action_id = action_id
         self.internal_rpc=Rpc()
-        self.action_doc=self.internal_rpc.get(f"/internal/project/v1/action/{self.action_id}/details")
+        self.action_doc=self.internal_rpc.get(f"/internal/v1/project/action/{self.action_id}/details")
         self.action_details=self.action_doc['actionDetails']
         print(self.action_details)
         self.rpc=RPC("mohned.moneam@matrice.ai",'mamoez12345#')
@@ -81,7 +81,7 @@ class MatriceModel:
             
     def update_status(self, action,service_name,stepCode, status, status_description):
 
-        url= "/internal/project/v1/action"
+        url= "/internal/v1/project/action"
     
         payload = {
             "_id":self.action_id,
