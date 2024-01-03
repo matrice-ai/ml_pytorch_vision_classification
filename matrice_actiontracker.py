@@ -243,7 +243,7 @@ class ModelLogging:
             }
 
         headers = {'Content-Type': 'application/json'}
-        path = f"/model_logging/v1/model/{self.model_id}/train_epoch_log"
+        path = f"/v1/model_logging/model/{self.model_id}/train_epoch_log"
        
         resp=self.rpc.internal_post(path=path, headers=headers, payload=model_log_payload)
         if resp.get("success"):
