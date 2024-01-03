@@ -293,7 +293,7 @@ class ActionTracker:
         self.action_id_str=str(self.action_id)
 
 
-        url = f"/internal/project/v1/action/{self.action_id_str}/details"
+        url = f"/internal/v1/project/action/{self.action_id_str}/details"
         self.action_doc=self.rpc.get(url)
         self.action_details = self.action_doc['actionDetails']
        
@@ -311,7 +311,7 @@ class ActionTracker:
     def get_job_params(self):
 
 
-        url = f"/internal/project/v1/action/{self.action_id_str}/details"
+        url = f"/internal/v1/project/action/{self.action_id_str}/details"
         self.jobParams = self.rpc.get(url)['jobParams']
 
         return dotdict(self.jobParams)
@@ -319,7 +319,7 @@ class ActionTracker:
 
     def update_status(self, action,service_name,stepCode, status, status_description):
 
-        url= "/internal/project/v1/action"
+        url= "/internal/v1/project/action"
 
         payload = {
             "_id":self.action_id_str,
@@ -388,3 +388,13 @@ class ActionTracker:
         payload={"indexToCat":indexToCat}
         
         self.model_logger.rpc.put(path=url ,payload=payload)
+
+    def get_index_to_category(self):
+        
+        url="/internal/v1/model/modelTrain/" + str(self._idModel_str)
+        
+        modelTrain_doc=self.rpc.get(url)
+
+        self.index_to_category=modelTrain_doc.get('indexToCat',{})
+
+        return self.index_to_category
