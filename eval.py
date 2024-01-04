@@ -374,7 +374,7 @@ def get_evaluation_results(split,output,target,index_to_labels):
             acc5 = accuracy(output, target, topk=(5,))[0]
         except:
             if torch.cuda.is_available():
-                acc5 = torch.tensor([100]).cuda(args.gpu)
+                acc5 = torch.tensor([100])
             else:
                 acc5 = torch.tensor([100])
 
