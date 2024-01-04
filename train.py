@@ -114,17 +114,20 @@ def main():
 
     actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
     model_config=actionTracker.get_job_params()
-    #try:
-    #    args.arch=model_config.model_key.lower()
-    #    args.lr=model_config.learningRate
-    #except:
-    #    print('model_config.model_key.lower() is ',model_config.model_key.lower())
-    #    print('ERROR not right model_key in pytorch')
+    try:
+       args.momentum=model_config.momentum
+       args.weight_decay=model_config.weight_decay
+       args.arch=model_config.model_key.replace(" ","").lower()
+       args.lr=model_config.learning_rate
+       args.epochs=model_config.epochs
+    except:
+       print('model_config.model_key.lower() is ',model_config.model_key.lower())
+       print('ERROR not right model_key in pytorch')
     print('model_config is' ,model_config)
     _idDataset=model_config['_idDataset']
     dataset_version=model_config['dataset_version']
     args.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
-    args.epochs=10
+    
 
     if args.seed is not None:
         random.seed(args.seed)
