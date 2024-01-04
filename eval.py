@@ -381,14 +381,14 @@ def get_evaluation_results(split,output,target,index_to_labels):
         results.append({
             "category":"all",
              "splitType":split,
-             "metricName":"acc_1",
+             "metricName":"acc@1",
             "metricValue":float(acc1.item())
          })
 
         results.append({
             "category":"all",
              "splitType":split,
-             "metricName":"acc_5",
+             "metricName":"acc@5",
             "metricValue":float(acc5.item())
          })
 
