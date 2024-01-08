@@ -327,13 +327,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
-    def get_index_to_labels(traindir):
-        dataset=datasets.ImageFolder(traindir)
-        # Get the mapping from class indices to labels
-        index_to_labels = {str(idx): str(label) for idx, label in enumerate(dataset.classes)}
-        return index_to_labels
-
-    index_to_labels=get_index_to_labels(traindir)
+    index_to_labels=actionTracker.get_index_to_category()
     
     if 'train' in args.splits and os.path.exists(traindir):
         payload+=get_metrics('train',train_loader, model,index_to_labels)
