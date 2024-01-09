@@ -115,9 +115,9 @@ def main():
     actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
     model_config=actionTracker.get_job_params()
     try:
-       args.momentum=model_config.momentum
-       args.weight_decay=model_config.weight_decay
-       args.arch=model_config.model_key.replace(" ","").lower()
+       #args.momentum=model_config.momentum if model_config.momentum != None
+       #args.weight_decay=model_config.weight_decay if model_config.weight_decay != None else args.weight_decay
+       args.arch=model_config.model_key.replace(" ","").lower() if model_config.model_key != None else args.arch
        args.lr=model_config.learning_rate
        args.epochs=model_config.epochs
     except:
