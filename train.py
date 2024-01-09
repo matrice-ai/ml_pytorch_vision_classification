@@ -118,8 +118,8 @@ def main():
        #args.momentum=model_config.momentum if model_config.momentum != None
        #args.weight_decay=model_config.weight_decay if model_config.weight_decay != None else args.weight_decay
        args.arch=model_config.model_key.replace(" ","").lower() if model_config.model_key != None else args.arch
-       args.lr=model_config.learning_rate
-       args.epochs=model_config.epochs
+       args.lr=float(model_config.learning_rate)
+       args.epochs=int(model_config.epochs)
     except:
        print('model_config.model_key.lower() is ',model_config.model_key.lower())
        print('ERROR not right model_key in pytorch')
