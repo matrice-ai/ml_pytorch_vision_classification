@@ -696,7 +696,31 @@ def pipeline_coreml(model, im, file, names, y, prefix=colorstr('CoreML Pipeline:
     model.save(f)  # pipelined
     print(f'{prefix} pipeline success ({time.time() - t:.2f}s), saved as {f} ({file_size(f):.1f} MB)')
 
+import shutil
+import os
+def try_upload(actiontracker,files):
 
+    for path in files:
+
+        if os.path.isfile(path):
+            try:
+                actiontracker.upload_checkpoint(f'{path}')
+            except:
+                print(f"Erorr in uploading {path}")
+                
+        elif os.path.isdir(path):
+            try:
+                if path.endswith("/"):
+                    path=path[:-1]
+                compressed_file = shutil.make_archive(
+                    base_name=f'{path.split("/")[-1]}',   # archive file name w/o extension
+                    format='zip',                                 # available formats: zip, gztar, bztar, xztar, tar
+                    root_dir=f"{path}"                   # directory to compress
+            )
+                actiontracker.upload_checkpoint(compressed_file)
+            except:
+                print(f"Erorr in uploading {path}")
+                
 @smart_inference_mode()
 def run(
         action_id,
@@ -833,6 +857,7 @@ def run(
                     f"\nValidate:        python {dir / 'val.py'} --weights {f[-1]} {h}"
                     f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{f[-1]}')  {s}"
                     f'\nVisualize:       https://netron.app')
+    try_upload(actionTracker,f)
     return f  # return list of exported files/dirs
 
 
