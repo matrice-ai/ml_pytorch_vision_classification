@@ -388,7 +388,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     status='OK'
     status_description='Training Dataset is loaded'
     action='model_train'
-    service_name='bg-job-scheduler'
+    service_name='be-model'
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
@@ -397,7 +397,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     status='OK'
     status_description='Model Training has started'
     action='model_train'
-    service_name='bg-job-scheduler'
+    service_name='be-model'
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
@@ -455,7 +455,7 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     status='SUCCESS'
     status_description='Model Training is completed'
     action='model_train'
-    service_name='bg-job-scheduler'
+    service_name='be-model'
     print(status_description)
     actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
