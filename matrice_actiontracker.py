@@ -58,11 +58,13 @@ def get_internal_api_key():
 class Rpc:
 
     def __init__(self):
-        secret_name = "env"
-        res = json.loads(get_secret_from_aws(secret_name))
-        base_url = res["base_url"]
-        self.BASE_URL = base_url
-
+        # secret_name = "env"
+        # res = json.loads(get_secret_from_aws(secret_name))
+        # base_url = res["base_url"]
+        # self.BASE_URL = base_url
+        
+        self.BASE_URL=f"https://{ENV}.backend.app.matrice.ai"
+        
         secret_name = "internal_api_keys"
         res = json.loads(get_secret_from_aws(secret_name))
         api_keys = res["key1"]
@@ -104,7 +106,7 @@ import json
 import requests
 from requests.auth import AuthBase
 
-LOGIN_URL = "https://dev.backend.app.matrice.ai/v2/user/auth/login"
+LOGIN_URL = f"https://{ENV}.backend.app.matrice.ai/v2/user/auth/login"
 
 class TokenAuth(AuthBase):
     """Implements a custom authentication scheme."""
@@ -148,7 +150,7 @@ class TokenAuth(AuthBase):
             print("The provided credentials are incorrect!!")   
             sys.exit(0)  
 
-BASE_URL = "https://dev.backend.app.matrice.ai"
+BASE_URL = f"https://{ENV}.backend.app.matrice.ai"
 
 class RPC:
 
