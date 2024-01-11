@@ -115,11 +115,14 @@ def main():
     actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
     model_config=actionTracker.get_job_params()
     try:
-       #args.momentum=model_config.momentum if model_config.momentum != None
-       #args.weight_decay=model_config.weight_decay if model_config.weight_decay != None else args.weight_decay
+       args.momentum=float(model_config.get("momentum",args.momentum))
+       args.weight_decay=float(model_config.get("weight_decay",args.weight_decay))
+       args.opt=str(model_config.get("optimizer",args.opt))
+       args.lr_scheduler=str(model_config.get("Lr scheduler",args.lr_scheduler))
+        
        args.arch=model_config.model_key.replace(" ","").lower() if model_config.model_key != None else args.arch
-       args.lr=float(model_config.learning_rate)
-       args.epochs=int(model_config.epochs)
+       args.lr=float(model_config.get("learning_rate",args.lr))
+       args.epochs=int(model_config.get("epochs".args.epochs))
     except:
        print('model_config.model_key.lower() is ',model_config.model_key.lower())
        print('ERROR not right model_key in pytorch')
