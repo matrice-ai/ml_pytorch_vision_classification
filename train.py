@@ -65,9 +65,9 @@ parser.add_argument("--lr-min", default=0.0, type=float, help="minimum lr of lr 
 
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=256, type=int,
+parser.add_argument('-b', '--batch-size', default=32, type=int,
                     metavar='N',
-                    help='mini-batch size (default: 256), this is the total '
+                    help='mini-batch size (default: 32), this is the total '
                          'batch size of all GPUs on the current node when '
                          'using Data Parallel or Distributed Data Parallel')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
@@ -118,7 +118,7 @@ def main():
        args.momentum=float(model_config.get("momentum",args.momentum))
        args.weight_decay=float(model_config.get("weight_decay",args.weight_decay))
        args.opt=str(model_config.get("optimizer",args.opt))
-       args.lr_scheduler=str(model_config.get("Lr scheduler",args.lr_scheduler))
+       args.lr_scheduler=str(model_config.get("Lr_scheduler",args.lr_scheduler))
         
        args.arch=model_config.model_key.replace(" ","").lower() if model_config.model_key != None else args.arch
        args.lr=float(model_config.get("learning_rate",args.lr))
