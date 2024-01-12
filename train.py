@@ -115,17 +115,17 @@ def main():
     actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
     model_config=actionTracker.get_job_params()
     try:
-       args.momentum=float(model_config.get("momentum",args.momentum))
-       args.weight_decay=float(model_config.get("weight_decay",args.weight_decay))
-       args.opt=str(model_config.get("optimizer",args.opt))
-       args.lr_scheduler=str(model_config.get("Lr_scheduler",args.lr_scheduler))
+        args.momentum = float(model_config.get("momentum", args.momentum))
+        args.weight_decay = float(model_config.get("weight_decay", args.weight_decay))
+        args.opt = str(model_config.get("optimizer", args.opt))
+        args.lr_scheduler = str(model_config.get("Lr_scheduler", args.lr_scheduler))
         
-       args.arch=model_config.model_key.replace(" ","").lower() if model_config.model_key != None else args.arch
-       args.lr=float(model_config.get("learning_rate",args.lr))
-       args.epochs=int(model_config.get("epochs".args.epochs))
-    except:
+        args.arch = model_config.model_key.replace(" ", "").lower() if model_config.model_key is not None else args.arch
+        args.lr = float(model_config.get("learning_rate", args.lr))
+        args.epochs = int(model_config.get("epochs", args.epochs))
+    except Exception as e:
        print('model_config.model_key.lower() is ',model_config.model_key.lower())
-       print('ERROR not right model_key in pytorch')
+       print('ERROR :{e}')
     print('model_config is' ,model_config)
     _idDataset=model_config['_idDataset']
     dataset_version=model_config['dataset_version']
