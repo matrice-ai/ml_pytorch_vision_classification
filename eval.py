@@ -34,7 +34,7 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='6574a7c41be52fe8c4e5bfa5')
-parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohnedmoneam@gmail.com')
+parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohned.moneam@matrice.ai')
 parser.add_argument('--password', help="Password of your Matrice.ai account",default='mamoez12345#')
 
 parser.add_argument('data', metavar='DIR', nargs='?', default='/content/cat-vs-dog_2',
