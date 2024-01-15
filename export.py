@@ -865,7 +865,7 @@ def parse_opt(known=False):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='6574a7c41be52fe8c4e5bfa5')
-    parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohnedmoneam@gmail.com')
+    parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohned.moneam@matrice.ai')
     parser.add_argument('--password', help="Password of your Matrice.ai account",default='mamoez12345#')
 
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
