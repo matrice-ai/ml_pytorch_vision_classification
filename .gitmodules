@@ -1,0 +1,4 @@
+[submodule "python_sdk"]
+	path = python_sdk
+	url = https://github.com/matrice-ai/python-sdk.git
+	branch = dev
