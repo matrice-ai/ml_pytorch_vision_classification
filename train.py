@@ -23,7 +23,7 @@ from torch.utils.data import Subset
 
 
 
-from matrice_actiontracker import ActionTracker
+from python_sdk.src.actionTracker import ActionTracker
 
 
 model_names = sorted(name for name in models.__dict__
@@ -33,8 +33,7 @@ model_names = sorted(name for name in models.__dict__
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='6574a7c41be52fe8c4e5bfa5')
-parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohned.moneam@matrice.ai')
-parser.add_argument('--password', help="Password of your Matrice.ai account",default='mamoez12345#')
+
 
 parser.add_argument('data', metavar='DIR', nargs='?', default='/content/cat-vs-dog_2',
                     help='path to dataset (default: imagenet)')
@@ -112,7 +111,7 @@ def main():
     args = parser.parse_args()
 
 
-    actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
+    actionTracker=ActionTracker(args.action_id)
     model_config=actionTracker.get_job_params()
     try:
         args.momentum = float(model_config.get("momentum", args.momentum))
