@@ -23,7 +23,7 @@ from torch.utils.data import Subset
 
 
 
-from matrice_actiontracker import ActionTracker
+from python_sdk.src.actionTracker import ActionTracker
 
 
 model_names = sorted(name for name in models.__dict__
@@ -32,9 +32,8 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
-parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='654e3cf90a8dd7424c6ca6bc')
-parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohnedmoneam@gmail.com')
-parser.add_argument('--password', help="Password of your Matrice.ai account",default='mamoez12345#')
+parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='6574a7c41be52fe8c4e5bfa5')
+
 
 parser.add_argument('data', metavar='DIR', nargs='?', default='/content/cat-vs-dog_2',
                     help='path to dataset (default: imagenet)')
@@ -65,9 +64,9 @@ parser.add_argument("--lr-min", default=0.0, type=float, help="minimum lr of lr 
 
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=256, type=int,
+parser.add_argument('-b', '--batch-size', default=32, type=int,
                     metavar='N',
-                    help='mini-batch size (default: 256), this is the total '
+                    help='mini-batch size (default: 32), this is the total '
                          'batch size of all GPUs on the current node when '
                          'using Data Parallel or Distributed Data Parallel')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
@@ -84,7 +83,7 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                    help='use pre-trained model')
+                    help='use pre-trained model',default=True)
 parser.add_argument('--world-size', default=-1, type=int,
                     help='number of nodes for distributed training')
 parser.add_argument('--rank', default=-1, type=int,
@@ -112,12 +111,25 @@ def main():
     args = parser.parse_args()
 
 
-    actionTracker=ActionTracker(args.action_id,email=args.email,password=args.password)
+    actionTracker=ActionTracker(args.action_id)
     model_config=actionTracker.get_job_params()
-
-    args.arch=model_config.modelKey
-    args.lr=model_config.learningRate
-    args.epochs=100
+    try:
+        args.momentum = float(model_config.get("momentum", args.momentum))
+        args.weight_decay = float(model_config.get("weight_decay", args.weight_decay))
+        args.opt = str(model_config.get("optimizer", args.opt))
+        args.lr_scheduler = str(model_config.get("Lr_scheduler", args.lr_scheduler))
+        
+        args.arch = model_config.model_key.replace(" ", "").lower() if model_config.model_key is not None else args.arch
+        args.lr = float(model_config.get("learning_rate", args.lr))
+        args.epochs = int(model_config.get("epochs", args.epochs))
+    except Exception as e:
+       print('model_config.model_key.lower() is ',model_config.model_key.lower())
+       print('ERROR :{e}')
+    print('model_config is' ,model_config)
+    _idDataset=model_config['_idDataset']
+    dataset_version=model_config['dataset_version']
+    args.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
+    
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -171,6 +183,57 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
             args.rank = args.rank * ngpus_per_node + gpu
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
+        
+
+        # Data loading code
+    if args.dummy:
+        print("=> Dummy data is used!")
+        train_dataset = datasets.FakeData(150, (3, 224, 224), 1000, transforms.ToTensor())
+        val_dataset = datasets.FakeData(30, (3, 224, 224), 1000, transforms.ToTensor())
+    else:
+        traindir = os.path.join(args.data, 'train')
+        valdir = os.path.join(args.data, 'val')
+        testdir = os.path.join(args.data, 'test')
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+        train_dataset = datasets.ImageFolder(
+            traindir,
+            transforms.Compose([
+                transforms.RandomResizedCrop(224),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+
+        val_dataset = datasets.ImageFolder(
+            valdir,
+            transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+
+    if args.distributed:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False, drop_last=True)
+    else:
+        train_sampler = None
+        val_sampler = None
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=args.batch_size, shuffle=False,
+        num_workers=args.workers, pin_memory=True, sampler=val_sampler)
+    
+    # Get the mapping from class indices to labels
+    index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_dataset.classes)}
+    actionTracker.add_index_to_category(index_to_labels)
+
     # create model
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
@@ -178,6 +241,9 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     else:
         print("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch]()
+
+    num_classes = len(train_dataset.classes)
+    model.fc = nn.Linear(model.fc.in_features,num_classes)
 
     if not torch.cuda.is_available() and not torch.backends.mps.is_available():
         print('using CPU, this will be slow')
@@ -314,49 +380,6 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
             print("=> no checkpoint found at '{}'".format(args.resume))
 
 
-    # Data loading code
-    if args.dummy:
-        print("=> Dummy data is used!")
-        train_dataset = datasets.FakeData(150, (3, 224, 224), 1000, transforms.ToTensor())
-        val_dataset = datasets.FakeData(30, (3, 224, 224), 1000, transforms.ToTensor())
-    else:
-        traindir = os.path.join(args.data, 'train')
-        valdir = os.path.join(args.data, 'val')
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-        train_dataset = datasets.ImageFolder(
-            traindir,
-            transforms.Compose([
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]))
-
-        val_dataset = datasets.ImageFolder(
-            valdir,
-            transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                normalize,
-            ]))
-
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False, drop_last=True)
-    else:
-        train_sampler = None
-        val_sampler = None
-
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_sampler)
-
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True, sampler=val_sampler)
 
     if args.evaluate:
         validate(val_loader, model, criterion, args)
@@ -366,15 +389,19 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
     stepCode='MDL_TRN_DTL'
     status='OK'
     status_description='Training Dataset is loaded'
-
-    actionTracker.update_status(stepCode,status,status_description)
+    action='model_train'
+    service_name='be-model'
+    print(status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
 
     stepCode='MDL_TRN_STRT'
     status='OK'
     status_description='Model Training has started'
-
-    actionTracker.update_status(stepCode,status,status_description)
+    action='model_train'
+    service_name='be-model'
+    print(status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
     early_stopping=EarlyStopping(patience=args.patience,min_delta=args.min_delta)
 
@@ -404,37 +431,78 @@ def main_worker(gpu, ngpus_per_node, args,actionTracker):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
+                    
+            if str(type(model)) == "<class 'torch.nn.parallel.data_parallel.DataParallel'>":
+                model_best=model.module
+            else:
+                model_best=model
+            torch.save(model_best,'model_best.pt')
 
-
-        epochDetails= {'test':[{"splitType": "train", "metric": "loss", "value":loss_train},
-                        {"splitType": "train", "metric": "acc@1", "value": acc1_train},
-                        {"splitType": "train", "metric": "acc@5", "value": acc5_train},
-                        {"splitType": "val", "metric": "loss", "value": loss_val},
-                        {"splitType": "val", "metric": "acc@1", "value": acc1_val},
-                        {"splitType": "val", "metric": "acc@5", "value": acc5_val}]}
+        epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
+                        {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
+                        {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
+                        {"splitType": "val", "metricName": "loss", "metricValue": loss_val},
+                        {"splitType": "val", "metricName": "acc@1", "metricValue": acc1_val},
+                        {"splitType": "val", "metricName": "acc@5", "metricValue": acc5_val}]
 
         actionTracker.log_epoch_results(epoch,epochDetails)
         print(epoch,epochDetails)
 
 
-        early_stopping.update(loss_val)
-        if early_stopping.stop:
-           break
-
+        # early_stopping.update(loss_val)
+        # if early_stopping.stop:
+        #    break
 
     stepCode='MDL_TRN_CMPL'
     status='SUCCESS'
     status_description='Model Training is completed'
+    action='model_train'
+    service_name='be-model'
+    print(status_description)
+    actionTracker.update_status(action,service_name,stepCode,status,status_description)
 
-    actionTracker.update_status(stepCode,status,status_description)
-
-    torch.save(model,'model_best.pt')
+    
+    
     try:
         actionTracker.upload_checkpoint('model_best.pth.tar')
         actionTracker.upload_checkpoint('model_best.pt')
     except:
-        print('Couldn't upload model_best.pt')
+        print("Couldn't upload model_best.pt")
 
+    from eval import get_metrics
+
+    payload=[]
+    
+    if os.path.exists(traindir):
+        payload+=get_metrics('train',train_loader, model,index_to_labels)
+
+    if  os.path.exists(valdir):
+        payload+=get_metrics('val',val_loader, model,index_to_labels)
+
+    if  os.path.exists(testdir):
+        
+        test_dataset = datasets.ImageFolder(
+            testdir,
+            transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+        
+        if args.distributed:
+            test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset, shuffle=False, drop_last=True)
+        else:
+            test_sampler=None
+        
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset, batch_size=args.batch_size, shuffle=False,
+            num_workers=args.workers, pin_memory=True, sampler=test_sampler)
+
+        payload+=get_metrics('test',test_loader, model,index_to_labels)
+    
+    actionTracker.save_evaluation_results(payload)
+    
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
@@ -463,7 +531,15 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
         loss = criterion(output, target)
 
         # measure accuracy and record loss
-        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+        acc1 = accuracy(output, target, topk=(1,))[0]
+
+        try:
+            acc5 = accuracy(output, target, topk=(5,))[0]
+        except:
+            if torch.cuda.is_available():
+                acc5 = torch.tensor([100]).cuda(args.gpu)
+            else:
+                acc5 = torch.tensor([100])
         losses.update(loss.item(), images.size(0))
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
@@ -502,7 +578,16 @@ def validate(val_loader, model, criterion, args):
                 loss = criterion(output, target)
 
                 # measure accuracy and record loss
-                acc1, acc5 = accuracy(output, target, topk=(1, 5))
+                acc1 = accuracy(output, target, topk=(1,))[0]
+
+                try:
+                    acc5 = accuracy(output, target, topk=(5,))[0]
+                except:
+                    if torch.cuda.is_available():
+                        acc5 = torch.tensor([100]).cuda(args.gpu)
+                    else:
+                        acc5 = torch.tensor([100])
+                        
                 losses.update(loss.item(), images.size(0))
                 top1.update(acc1[0], images.size(0))
                 top5.update(acc5[0], images.size(0))

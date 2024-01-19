@@ -3,9 +3,11 @@ import boto3
 from botocore.exceptions import ClientError
 secrets_dict = {}
 client = None
+import os
 
-# ENV = os.environ['ENV']
-ENV="dev"
+ENV = os.environ['ENV']
+access_key=os.environ['AWS_ACCESS_KEY_ID']
+secret_key=os.environ['AWS_SECRET_ACCESS_KEY']
 
 
 def get_secret_from_aws(secret_name):
@@ -56,11 +58,13 @@ def get_internal_api_key():
 class Rpc:
 
     def __init__(self):
-        secret_name = "env"
-        res = json.loads(get_secret_from_aws(secret_name))
-        base_url = res["base_url"]
-        self.BASE_URL = base_url
-
+        # secret_name = "env"
+        # res = json.loads(get_secret_from_aws(secret_name))
+        # base_url = res["base_url"]
+        # self.BASE_URL = base_url
+        
+        self.BASE_URL=f"https://{ENV}.backend.app.matrice.ai"
+        
         secret_name = "internal_api_keys"
         res = json.loads(get_secret_from_aws(secret_name))
         api_keys = res["key1"]
@@ -102,7 +106,7 @@ import json
 import requests
 from requests.auth import AuthBase
 
-LOGIN_URL = "https://dev.backend.app.matrice.ai/v2/user/auth/login"
+LOGIN_URL = f"https://{ENV}.backend.app.matrice.ai/v2/user/auth/login"
 
 class TokenAuth(AuthBase):
     """Implements a custom authentication scheme."""
@@ -146,7 +150,7 @@ class TokenAuth(AuthBase):
             print("The provided credentials are incorrect!!")   
             sys.exit(0)  
 
-BASE_URL = "https://dev.backend.app.matrice.ai"
+BASE_URL = f"https://{ENV}.backend.app.matrice.ai"
 
 class RPC:
 
@@ -241,7 +245,7 @@ class ModelLogging:
             }
 
         headers = {'Content-Type': 'application/json'}
-        path = f"/model_logging/v1/model/{self.model_id}/train_epoch_log"
+        path = f"/v1/model_logging/model/{self.model_id}/train_epoch_log"
        
         resp=self.rpc.internal_post(path=path, headers=headers, payload=model_log_payload)
         if resp.get("success"):
@@ -253,40 +257,6 @@ class ModelLogging:
 
         return resp, error, message
 
-class Model:
-
-    def __init__(self, project_id, model_id=None, email="", password=""):
-
-        self.project_id = project_id
-        self.model_id = model_id
-        self.rpc = RPC(email, password)
-
-    def get_model_train(self, action_status_id):
-
-        path = f"/v1/model/action_status/{action_status_id}"
-        resp = self.rpc.get(path=path)
-        if resp.get("success"):
-            error = None
-            message = "Model Train fetched successfully"
-        else:
-            error = resp.get("message")
-            message = "Could not fetch models train"
-
-        return resp, error, message
-    
-    def get_experiment_storage_path(self, experiment_id):
-
-        path = f"/v1/model/experiment/{experiment_id}/storage_path"
-        resp = self.rpc.get(path=path)
-        if resp.get("success"):
-            error = None
-            message = "Storage path fetched successfully"
-        else:
-            error = resp.get("message")
-            message = "Could not fetch the storage path"
-    
-        return resp, error, message
-
 
 import os
 import requests
@@ -295,11 +265,6 @@ import time
 import boto3
 from bson import ObjectId
 
-
-secret_name = "aws"
-res = json.loads(get_secret_from_aws(secret_name))
-access_key = res["access_key"]
-secret_key = res["secret_key"]
 
 def get_s3_client():
     s3_client = boto3.client('s3', aws_access_key_id=access_key,
@@ -325,30 +290,43 @@ class ActionTracker:
     def __init__(self,action_id,email,password):
 
         self.email , self.password= email,password
+        self.rpc=Rpc()
         self.action_id = ObjectId(action_id)
         self.action_id_str=str(self.action_id)
-        self.matriceModel=Model(self.action_id_str,None,email=self.email,password=self.password)
-        self.model_train_details=self.matriceModel.get_model_train(self.action_id)[0]['data']
-        self._idModelTrain=self.model_train_details['_id']
-        self._idModelTrain_str=str(self._idModelTrain)
-        self.experiment_id=self.model_train_details['_idExperiment']
-        self.model_logger=ModelLogging(self._idModelTrain_str,email=self.email,password=self.password)
-        self.rpc=Rpc()
+
+
+        url = f"/internal/v1/project/action/{self.action_id_str}/details"
+        self.action_doc=self.rpc.get(url)
+        self.action_details = self.action_doc['actionDetails']
+       
+        try:
+            self._idModel=self.action_details['_idModelTrain']
+            self._idModel_str=str(self._idModel)
+            self.experiment_id=self.action_details['_idExperiment']
+        except:
+            self._idModel=self.action_details['_idModel']
+            self._idModel_str=str(self._idModel)
+            
+        self.model_logger=ModelLogging(self._idModel_str,email=self.email,password=self.password)
+        
 
     def get_job_params(self):
 
 
-        self.model_config = self.model_train_details['modelConfig']
+        url = f"/internal/v1/project/action/{self.action_id_str}/details"
+        self.jobParams = self.rpc.get(url)['jobParams']
 
-        return dotdict(self.model_config)
+        return dotdict(self.jobParams)
 
 
-    def update_status(self, stepCode, status, status_description):
+    def update_status(self, action,service_name,stepCode, status, status_description):
 
-        url= "/internal/project/v1/action"
+        url= "/internal/v1/project/action"
 
         payload = {
             "_id":self.action_id_str,
+            "action"  : action,
+            "serviceName": service_name,
             "stepCode": stepCode,
             "status":status,
             "statusDescription":status_description,
@@ -357,40 +335,68 @@ class ActionTracker:
         x=self.rpc.put(url, payload)
 
 
-    def log_epoch_results(self,  epoch,epoch_result_dict):
+    def log_epoch_results(self,  epoch,epoch_result_list):
 
-        self.model_logger.insert_model_log_to_queue(self._idModelTrain_str,self.action_id_str,epoch,epoch_result_dict)
+        self.model_logger.insert_model_log_to_queue(self._idModel_str,self.action_id_str,epoch,epoch_result_list)
 
 
 
     def upload_checkpoint(self,checkpoint_path,best_epoch_num=0 ):
 
-        url= 'model/v1/update_storage_path'
+        # url= '/model/v1/update_storage_path'
 
-        self.baseModelStoragePath_bucket=self.matriceModel.get_experiment_storage_path(self.experiment_id)[0]['data'].split('.com/')[-1]
-                                            # Hard coded self.baseModelStoragePath_bucket instead of 'dev.images.download.speed.test' beacuse problem in dev.models
-        s3_location=upload_to_s3(checkpoint_path, 'dev.images.download.speed.test', f'{self._idModelTrain_str}/{checkpoint_path.split("/")[-1]}')
+        # self.baseModelStoragePath_bucket=self.matriceModel.get_experiment_storage_path(self.experiment_id)[0]['data'].split('.com/')[-1]
+                                            # Hard coded self.baseModelStoragePath_bucket instead of 'matrice.dev.models' 
+        s3_location=upload_to_s3(checkpoint_path, 'matrice.dev.models', f'{self._idModel_str}/{checkpoint_path.split("/")[-1]}')
 
-        Payload = {
-            "_idModelTrain": self._idModelTrain,
-            "bestEpoch": best_epoch_num,
-            "storage_path":s3_location
-        }
+        # Payload = {
+        #     "_idModelTrain": self._idModel,
+        #     "bestEpoch": best_epoch_num,
+        #     "storage_path":s3_location
+        # }
 
+        print("MODEL UPLOADED TO")
         print(s3_location)
         #self.rpc.put(url,Payload)
 
+    def save_evaluation_results(self,list_of_result_dicts):
+        # {
+        #     splitType
+        #     category
+        #     metricName
+        #     metricValue
+        # }
 
-    # def save_evaluation_results(self, data_split, result_dict):
-    #     url= 'model/v1/save_evaluation_results'
-    #     Payload = {
-    #         "_idModelTrain": self._idModelTrain,
-    #         "_idDataset": self._idDataset, # What if NONE
-    #         "datasetVersion": self.datasetVersion,
-    #         "splitType": data_split,
-    #         "results": result_dict
-    #     }
-    #     # "results": {
-    #     # "accuracy" : 0.23,
-    #     # "precision": 0.45,}
-    #     self.rpc.put(url,Payload)
+        url= '/v1/model/add_eval_results'
+
+
+        Payload = {
+                "_idModel":self._idModel,
+                "_idDataset":self.action_details['_idDataset'],
+                "_idProject":self.action_doc['_idProject'],
+                "isOptimized": self.action_details.get('isOptimized',False),
+                "runtimeFramework":self.action_details.get('runtimeFramework',"Pytorch"),
+                "datasetVersion":self.action_details['datasetVersion'],
+                "splitTypes":'',
+                "evalResults":list_of_result_dicts
+            }
+
+        x=self.model_logger.rpc.post(path=url,payload=Payload)
+        
+    def add_index_to_category(self,indexToCat):
+        
+        url=f'/v1/model/{self._idModel}/update_index_to_cat'
+
+        payload={"indexToCat":indexToCat}
+        
+        self.model_logger.rpc.put(path=url ,payload=payload)
+
+    def get_index_to_category(self):
+        
+        url="/internal/v1/model/modelTrain/" + str(self._idModel_str)
+        
+        modelTrain_doc=self.rpc.get(url)
+
+        self.index_to_category=modelTrain_doc.get('indexToCat',{})
+
+        return self.index_to_category
