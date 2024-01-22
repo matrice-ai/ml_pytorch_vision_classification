@@ -68,6 +68,10 @@ def update_with_defaults(model_config):
     for key, value in default_values.items():
         if model_config.get(key,None) == None:
             model_config[key]= value
+
+        if type(default_values[key]) != type(model_config[key]):
+            model_config[key]=type(default_values[key])(model_config[key])
+            
     return model_config
 
 best_acc1 = 0
