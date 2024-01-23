@@ -8,15 +8,10 @@ import torch.nn.functional as F
 
 def load_model(actionTracker):
     
-    try:
 
-        actionTracker.download_model("model.pt")
-        model = torch.load('model.pt', map_location='cpu')
-        
-    except:
-        print("not able to load model weights will use pretrained resnet18")
-        model=torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-        
+    actionTracker.download_model("model.pt")
+    model = torch.load('model.pt', map_location='cpu')
+
     if torch.cuda.is_available():
         device = torch.device("cuda")
         model = model.to(device)

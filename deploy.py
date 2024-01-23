@@ -70,7 +70,7 @@ class MatriceModel:
     def inference(self, image):
         
         if self.model is None:
-            self.model = self.load_model(self.model_id)
+            self.model = self.load_model(self.actionTracker)
 
         self.last_no_inference_time = -1
 
