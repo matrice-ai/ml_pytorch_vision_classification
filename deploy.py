@@ -55,10 +55,10 @@ class MatriceModel:
         port=80
         self.update_deployment_address()
         try:
-            self.actionTracker.update_status("deploy_add","deployment","MDL_DPL_STR", "OK", "Model deployment started")
+            self.actionTracker.update_status("MDL_DPL_STR", "OK", "Model deployment started")
             uvicorn.run(self.app, host=host, port=port)
         except:
-            self.actionTracker.update_status("deploy_add","deployment","ERROR", "ERROR", "Model deployment ERROR")
+            self.actionTracker.update_status("ERROR", "ERROR", "Model deployment ERROR")
 
 
     def get_ip(self):
@@ -93,7 +93,7 @@ class MatriceModel:
                 try:
                     print('Shutting down due to idle time exceeding the threshold.')
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
-                    self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
+                    self.actionTracker.update_status("MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
                     os._exit(0)
                 except Exception as e:
