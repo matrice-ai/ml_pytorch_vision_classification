@@ -21,7 +21,7 @@ class MatriceModel:
         self.rpc=session.rpc
         self.actionTracker = ActionTracker(session,action_id)
         
-        self.action_details=self.actionTracker['actionDetails']
+        self.action_details=self.actionTracker.action_details 
         print(self.action_details)
 
         self._idDeploymentInstance=self.action_details['_idModelDeployInstance']
