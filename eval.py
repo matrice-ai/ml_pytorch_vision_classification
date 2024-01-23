@@ -66,14 +66,14 @@ def main(action_id):
     index_to_labels=actionTracker.get_index_to_category()
     payload=[]
     
-    if 'train' in model_config.splits and os.path.exists(os.path.join(model_config.data, 'train')):
+    if 'train' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'train')):
         payload+=get_metrics('train',train_loader, model,index_to_labels)
 
-    if 'val' in model_config.splits and os.path.exists(os.path.join(model_config.data, 'val')):
+    if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
         payload+=get_metrics('val',val_loader, model,index_to_labels)
 
 
-    if 'test' in model_config.splits and os.path.exists(os.path.join(model_config.data, 'test')):
+    if 'test' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
         payload+=get_metrics('test',test_loader, model,index_to_labels)
 
 

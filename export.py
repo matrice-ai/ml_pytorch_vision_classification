@@ -720,7 +720,7 @@ def try_upload(actiontracker,files):
                 print(f"Erorr in uploading {path}")
 
     stepCode='MDL_EXP_CMPL'
-    status='OK'
+    status='SUCCESS'
     status_description='Model Export Completed'
     print(status_description)
     actiontracker.update_status(stepCode,status,status_description)
