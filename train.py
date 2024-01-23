@@ -93,10 +93,10 @@ def main(action_id):
     _idDataset = model_config['_idDataset']
     dataset_version = model_config['dataset_version']
     model_config.data = f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
-    print(f"epochs is :{model_config.keys()}")
+
     update_with_defaults(model_config) # Just For testing it will be removed
     print('model_config is', model_config)
-    print(f"epochs is :{model_config.epochs}")
+
     train_loader, val_loader, test_loader = load_data(model_config)
     index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
     actionTracker.add_index_to_category(index_to_labels)
@@ -136,13 +136,13 @@ def main(action_id):
         loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
 
         # evaluate on validation set
-        loss_val,acc1_val,acc5_val,acc1= validate(val_loader, model, criterion,device, model_config)
+        loss_val,acc1_val,acc5_val= validate(val_loader, model, criterion,device, model_config)
 
         scheduler.step()
 
         # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
-        best_acc1 = max(acc1, best_acc1)
+        is_best = acc1_val > best_acc1
+        best_acc1 = max(acc1_val, best_acc1)
 
 
         save_checkpoint({
@@ -154,8 +154,6 @@ def main(action_id):
             'scheduler' : scheduler.state_dict()
         }, model,is_best)
                 
-
-
         epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
                         {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
                         {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
@@ -204,6 +202,10 @@ def train(train_loader, model, criterion, optimizer, epoch, device, model_config
     # switch to train mode
     model.train()
 
+    total_loss = 0.0
+    total_acc1 = 0.0
+    total_acc5 = 0.0
+
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
 
@@ -217,38 +219,46 @@ def train(train_loader, model, criterion, optimizer, epoch, device, model_config
 
         # measure accuracy and record loss
         acc1 = accuracy(output, target, topk=(1,))[0]
-
         try:
             acc5 = accuracy(output, target, topk=(5,))[0]
         except:
             if torch.cuda.is_available():
-                acc5 = torch.tensor([100]).cuda(model_config.gpu)
+                acc5 = torch.tensor([100]).cuda(model_config.gpu).item()
             else:
-                acc5 = torch.tensor([100])
+                acc5 = torch.tensor([100]).item()
+
+
+        total_loss += loss.item()
+        total_acc1 += acc1
+        total_acc5 += acc5
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        end = time.time()
+        avg_loss = total_loss / len(train_loader)
+        avg_acc1 = total_acc1 / len(train_loader)
+        avg_acc5 = total_acc5 / len(train_loader)
 
-    return loss.item(),acc1.item(), acc5.item()
+    return avg_loss, avg_acc1, avg_acc5
 
 
 
-def validate(val_loader, model, criterion, device,model_config):
+def validate(val_loader, model, criterion, device, model_config):
 
     def run_validate(loader, base_progress=0):
+        total_loss = 0.0
+        total_acc1 = 0.0
+        total_acc5 = 0.0
+
         with torch.no_grad():
             end = time.time()
             for i, (images, target) in enumerate(loader):
                 i = base_progress + i
-                
 
                 images = images.to(device)
                 target = target.to(device)
-
 
                 # compute output
                 output = model(images)
@@ -256,27 +266,29 @@ def validate(val_loader, model, criterion, device,model_config):
 
                 # measure accuracy and record loss
                 acc1 = accuracy(output, target, topk=(1,))[0]
-
                 try:
                     acc5 = accuracy(output, target, topk=(5,))[0]
                 except:
                     if torch.cuda.is_available():
-                        acc5 = torch.tensor([100]).cuda(model_config.gpu)
+                        acc5 = torch.tensor([100]).cuda(model_config.gpu).item()
                     else:
-                        acc5 = torch.tensor([100])
-                        
-                top1.update(acc1[0], images.size(0))
+                        acc5 = torch.tensor([100]).item()
 
-            return loss.item(),acc1.item(), acc5.item(),top1
+                total_loss += loss.item()
+                total_acc1 += acc1
+                total_acc5 += acc5
 
-    top1 = AverageMeter('Acc@1', ':6.2f', Summary.AVERAGE)
+        avg_loss = total_loss / len(loader)
+        avg_acc1 = total_acc1 / len(loader)
+        avg_acc5 = total_acc5 / len(loader)
+
+        return avg_loss, avg_acc1, avg_acc5
 
     model.eval()
 
-    loss,acc1, acc5, top1=run_validate(val_loader)
+    loss, acc1, acc5 = run_validate(val_loader)
 
-
-    return loss,acc1, acc5, top1.avg
+    return loss, acc1, acc5
 
 def load_data(model_config):
     global traindir, valdir, testdir
@@ -460,7 +472,17 @@ class AverageMeter(object):
 
 
 def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
+    """
+    Computes the accuracy over the top-k predictions for the specified values of k.
+
+    Args:
+        output (torch.Tensor): Model predictions.
+        target (torch.Tensor): Ground truth labels.
+        topk (tuple): Tuple of integers specifying the top-k values to consider.
+
+    Returns:
+        list: List of accuracy values for each top-k value.
+    """
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)
@@ -469,11 +491,12 @@ def accuracy(output, target, topk=(1,)):
         pred = pred.t()
         correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-        res = []
+        acc_list = []
         for k in topk:
-            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
+            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            acc_list.append(correct_k.mul_(100.0 / batch_size).item())
+
+    return acc_list
 
 
 
