@@ -152,7 +152,7 @@ def main(action_id):
             'best_acc1': best_acc1,
             'optimizer' : optimizer.state_dict(),
             'scheduler' : scheduler.state_dict()
-        }, is_best)
+        }, model,is_best)
                 
 
 
@@ -400,14 +400,14 @@ def update_compute(model):
     
     return device
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, model,is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
-        if isinstance(state, torch.nn.DataParallel):
-            model_best=copy.deepcopy(state.module)
+        if isinstance(model, torch.nn.DataParallel):
+            model_best=copy.deepcopy(model.module)
         else:
-            model_best=state
+            model_best=model
         torch.save(model_best,'model_best.pt')
 
 class EarlyStopping:
