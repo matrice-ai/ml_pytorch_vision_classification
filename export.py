@@ -702,7 +702,7 @@ def try_upload(actiontracker,files):
 
         if os.path.isfile(path):
             try:
-                actiontracker.upload_checkpoint(f'{path}')
+                actiontracker.upload_checkpoint(f'{path}',model_type="exported")
             except:
                 print(f"Erorr in uploading {path}")
                 
@@ -715,9 +715,15 @@ def try_upload(actiontracker,files):
                     format='zip',                                 # available formats: zip, gztar, bztar, xztar, tar
                     root_dir=f"{path}"                   # directory to compress
             )
-                actiontracker.upload_checkpoint(compressed_file)
+                actiontracker.upload_checkpoint(compressed_file,model_type="exported")
             except:
                 print(f"Erorr in uploading {path}")
+
+    stepCode='MDL_EXP_CMPL'
+    status='OK'
+    status_description='Model Export Completed'
+    print(status_description)
+    actiontracker.update_status(stepCode,status,status_description)
                 
 @smart_inference_mode()
 def run(
@@ -751,6 +757,12 @@ def run(
     session=Session()
     actionTracker = ActionTracker(session,action_id)
 
+    stepCode='MDL_EXP_ACK'
+    status='OK'
+    status_description='Model Export Acknowledged'
+    print(status_description)
+    actionTracker.update_status(stepCode,status,status_description)
+
     model_config=actionTracker.get_job_params()
     
     actionTracker.download_model(weights)
@@ -766,6 +778,12 @@ def run(
     assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}'
     jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle = flags  # export booleans
     file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
+
+    stepCode='MDL_EXP_STR'
+    status='OK'
+    status_description='Model Export Started'
+    print(status_description)
+    actionTracker.update_status(stepCode,status,status_description)
 
     # Load PyTorch model
     device = select_device(device)
