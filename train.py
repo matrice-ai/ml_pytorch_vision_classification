@@ -494,7 +494,7 @@ def accuracy(output, target, topk=(1,)):
         acc_list = []
         for k in topk:
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            acc_list.append(correct_k.mul_(100.0 / batch_size).item())
+            acc_list.append(correct_k.mul_(1.0 / batch_size).item())
 
     return acc_list
 
