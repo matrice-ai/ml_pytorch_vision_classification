@@ -97,29 +97,28 @@ def main(action_id):
     update_with_defaults(model_config) # Just For testing it will be removed
     print('model_config is', model_config)
 
-    train_loader, val_loader, test_loader = load_data(model_config)
-    index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
-    actionTracker.add_index_to_category(index_to_labels)
+    try:
+        train_loader, val_loader, test_loader = load_data(model_config)
+        index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
+        actionTracker.add_index_to_category(index_to_labels)
 
-    model = initialize_model(model_config, train_loader.dataset)
-    
-    device = update_compute(model)
+        model = initialize_model(model_config, train_loader.dataset)
+        
+        device = update_compute(model)
+        status='OK'
+        status_description='Training Dataset is loaded'
 
-    criterion = nn.CrossEntropyLoss().to(device)
-
-    optimizer = setup_optimizer(model, model_config)
-
-    scheduler = setup_scheduler(optimizer, model_config)
-
-
-
+    except Exception as e:
+        status='ERROR'
+        status_description='Error in loading data or model' + str(e)
 
     stepCode='MDL_TRN_DTL'
-    status='OK'
-    status_description='Training Dataset is loaded'
     print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
 
+    criterion = nn.CrossEntropyLoss().to(device)
+    optimizer = setup_optimizer(model, model_config)
+    scheduler = setup_scheduler(optimizer, model_config)
 
     stepCode='MDL_TRN_STRT'
     status='OK'
@@ -127,7 +126,7 @@ def main(action_id):
     print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
 
-
+    best_model = None
     early_stopping=EarlyStopping(patience=model_config.patience,min_delta=model_config.min_delta)
 
     for epoch in range(model_config.epochs):
@@ -143,17 +142,17 @@ def main(action_id):
         # remember best acc@1 and save checkpoint
         is_best = acc1_val > best_acc1
         best_acc1 = max(acc1_val, best_acc1)
-
-
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': model_config.arch,
-            'state_dict': model.state_dict(),
-            'best_acc1': best_acc1,
-            'optimizer' : optimizer.state_dict(),
-            'scheduler' : scheduler.state_dict()
-        }, model,is_best)
-                
+        if is_best:
+            best_model = model
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'arch': model_config.arch,
+                'state_dict': model.state_dict(),
+                'best_acc1': best_acc1,
+                'optimizer' : optimizer.state_dict(),
+                'scheduler' : scheduler.state_dict()
+            }, model,is_best)
+                    
         epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
                         {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
                         {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
@@ -165,37 +164,39 @@ def main(action_id):
         print(epoch,epochDetails)
 
 
-        # early_stopping.update(loss_val)
-        # if early_stopping.stop:
-        #    break
+        early_stopping.update(loss_val)
+        if early_stopping.stop:
+            break
 
-    stepCode='MDL_TRN_CMPL'
-    status='SUCCESS'
-    status_description='Model Training is completed'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    
 
     
     try:
         actionTracker.upload_checkpoint('model_best.pth.tar')
         actionTracker.upload_checkpoint('model_best.pt')
-    except:
-        print("Couldn't upload model_best.pt")
+   
+        from eval import get_metrics
 
-    from eval import get_metrics
+        payload=[]
 
-    payload=[]
+        if  os.path.exists(valdir):
+            payload+=get_metrics('val',val_loader, best_model, index_to_labels)
+
+        if  os.path.exists(testdir):
+            payload+=get_metrics('test',test_loader, best_model, index_to_labels)
+        
+        actionTracker.save_evaluation_results(payload)
+        status = 'SUCCESS'
+        status_description='Model Training is completed'
     
-    if os.path.exists(traindir):
-        payload+=get_metrics('train',train_loader, model,index_to_labels)
-
-    if  os.path.exists(valdir):
-        payload+=get_metrics('val',val_loader, model,index_to_labels)
-
-    if  os.path.exists(testdir):
-        payload+=get_metrics('test',test_loader, model,index_to_labels)
+    except Exception as e:
+        status = 'ERROR'
+        status_description = 'Model training is completed but error in model saving or eval' + str(e)
+            
+    stepCode='MDL_TRN_CMPL'
     
-    actionTracker.save_evaluation_results(payload)
+    print(status_description)
+    actionTracker.update_status(stepCode,status,status_description)
     
 def train(train_loader, model, criterion, optimizer, epoch, device, model_config):
 
@@ -296,59 +297,53 @@ def load_data(model_config):
     valdir = os.path.join(model_config.data, 'val')
     testdir = os.path.join(model_config.data, 'test')
     
-    try:
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])
+    
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                        std=[0.229, 0.224, 0.225])
 
-        train_dataset = datasets.ImageFolder(
-            traindir,
-            transforms.Compose([
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]))
+    train_dataset = datasets.ImageFolder(
+        traindir,
+        transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
 
-        val_dataset = datasets.ImageFolder(
-            valdir,
+    val_dataset = datasets.ImageFolder(
+        valdir,
+        transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=model_config.batch_size, shuffle=False,
+        num_workers=model_config.workers, pin_memory=True)
+
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=model_config.batch_size, shuffle=False,
+        num_workers=model_config.workers, pin_memory=True)
+
+    test_loader = None
+    if os.path.exists(testdir):
+        test_dataset = datasets.ImageFolder(
+            testdir,
             transforms.Compose([
                 transforms.Resize(256),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 normalize,
             ]))
-
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=model_config.batch_size, shuffle=False,
+        
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset, batch_size=model_config.batch_size, shuffle=False,
             num_workers=model_config.workers, pin_memory=True)
 
-        val_loader = torch.utils.data.DataLoader(
-            val_dataset, batch_size=model_config.batch_size, shuffle=False,
-            num_workers=model_config.workers, pin_memory=True)
+    return train_loader, val_loader, test_loader
 
-        test_loader = None
-        if os.path.exists(testdir):
-            test_dataset = datasets.ImageFolder(
-                testdir,
-                transforms.Compose([
-                    transforms.Resize(256),
-                    transforms.CenterCrop(224),
-                    transforms.ToTensor(),
-                    normalize,
-                ]))
-            
-            test_loader = torch.utils.data.DataLoader(
-                test_dataset, batch_size=model_config.batch_size, shuffle=False,
-                num_workers=model_config.workers, pin_memory=True)
-
-        return train_loader, val_loader, test_loader
-
-    except Exception as e:
-        print(f"=> Dummy data is used! Error: {e}")
-        train_dataset = datasets.FakeData(150, (3, 224, 224), 1000, transforms.ToTensor())
-        val_dataset = datasets.FakeData(30, (3, 224, 224), 1000, transforms.ToTensor())
-        test_dataset = datasets.FakeData(30, (3, 224, 224), 1000, transforms.ToTensor())
-        return torch.utils.data.DataLoader(train_dataset), torch.utils.data.DataLoader(val_dataset), torch.utils.data.DataLoader(test_dataset)
 
 def initialize_model(model_config, train_dataset):
     print("=> using pre-trained model '{}'".format(model_config.arch))

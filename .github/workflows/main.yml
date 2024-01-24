@@ -41,7 +41,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: pytorch-vision-imagenet
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$NOW .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$NOW . --squash
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$NOW
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest . --squash
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
