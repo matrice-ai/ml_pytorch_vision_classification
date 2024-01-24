@@ -28,3 +28,4 @@ starlette
 typing_extensions
 urllib3
 zipp
+scikit-learn

@@ -21,7 +21,7 @@ class MatriceModel:
         self.rpc=session.rpc
         self.actionTracker = ActionTracker(session,action_id)
         
-        self.action_details=self.actionTracker['actionDetails']
+        self.action_details=self.actionTracker.action_details 
         print(self.action_details)
 
         self._idDeploymentInstance=self.action_details['_idModelDeployInstance']
@@ -55,10 +55,10 @@ class MatriceModel:
         port=80
         self.update_deployment_address()
         try:
-            self.actionTracker.update_status("deploy_add","deployment","MDL_DPL_STR", "OK", "Model deployment started")
+            self.actionTracker.update_status("MDL_DPL_STR", "OK", "Model deployment started")
             uvicorn.run(self.app, host=host, port=port)
         except:
-            self.actionTracker.update_status("deploy_add","deployment","ERROR", "ERROR", "Model deployment ERROR")
+            self.actionTracker.update_status("ERROR", "ERROR", "Model deployment ERROR")
 
 
     def get_ip(self):
@@ -70,7 +70,7 @@ class MatriceModel:
     def inference(self, image):
         
         if self.model is None:
-            self.model = self.load_model(self.model_id)
+            self.model = self.load_model(self.actionTracker)
 
         self.last_no_inference_time = -1
 
@@ -93,7 +93,7 @@ class MatriceModel:
                 try:
                     print('Shutting down due to idle time exceeding the threshold.')
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
-                    self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
+                    self.actionTracker.update_status("MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
                     os._exit(0)
                 except Exception as e:
