@@ -771,6 +771,10 @@ def run(
 
     include=actionTracker.action_details['exportFormats']
 
+    if include[0]=="tensorrt":
+        include[0]="engine"
+        device="0"
+
     t = time.time()
     include = [x.lower() for x in include]  # to lowercase
     fmts = tuple(export_formats()['Argument'][1:])  # --include arguments
