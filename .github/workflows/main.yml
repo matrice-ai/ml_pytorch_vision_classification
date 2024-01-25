@@ -31,7 +31,6 @@ jobs:
         run: |
           git config --global url.https://$GH_ACCESS_USER:$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
           git clone -b dev https://github.com/matrice-ai/python-sdk.git ./python_sdk
-          git clone -b dev https://github.com/matrice-ai/python-common.git ./python_common
           git submodule update --recursive
       - name: Login to Amazon ECR
         id: login-ecr
@@ -42,7 +41,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: pytorch-vision-imagenet
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$NOW .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$NOW . --squash
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$NOW
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest . --squash
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest

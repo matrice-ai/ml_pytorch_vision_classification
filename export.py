@@ -43,8 +43,6 @@ TensorFlow.js:
     $ ln -s ../../yolov5/yolov5s_web_model public/yolov5s_web_model
     $ npm start
 """
-from matrice_actiontracker import ActionTracker
-from python_common.services.s3 import download_from_s3
 
 import argparse
 import contextlib
@@ -704,7 +702,7 @@ def try_upload(actiontracker,files):
 
         if os.path.isfile(path):
             try:
-                actiontracker.upload_checkpoint(f'{path}')
+                actiontracker.upload_checkpoint(f'{path}',model_type="exported")
             except:
                 print(f"Erorr in uploading {path}")
                 
@@ -717,18 +715,22 @@ def try_upload(actiontracker,files):
                     format='zip',                                 # available formats: zip, gztar, bztar, xztar, tar
                     root_dir=f"{path}"                   # directory to compress
             )
-                actiontracker.upload_checkpoint(compressed_file)
+                actiontracker.upload_checkpoint(compressed_file,model_type="exported")
             except:
                 print(f"Erorr in uploading {path}")
+
+    stepCode='MDL_EXP_CMPL'
+    status='SUCCESS'
+    status_description='Model Export Completed'
+    print(status_description)
+    actiontracker.update_status(stepCode,status,status_description)
                 
 @smart_inference_mode()
 def run(
         action_id,
-        email,
-        password,
         data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
         weights=ROOT / 'model.pt',  # weights path
-        imgsz=(640, 640),  # image (height, width)
+        imgsz=(224,224),  # image (height, width)
         batch_size=1,  # batch size
         device='cpu',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         include=('torchscript', 'onnx'),  # include formats
@@ -749,16 +751,29 @@ def run(
         iou_thres=0.45,  # TF.js NMS: IoU threshold
         conf_thres=0.25,  # TF.js NMS: confidence threshold
 ):
+    from python_sdk.src.actionTracker import ActionTracker
+    from python_sdk.matrice import Session
 
-    actionTracker=ActionTracker(opt.action_id,email=opt.email,password=opt.password)
+    session=Session()
+    actionTracker = ActionTracker(session,action_id)
+
+    stepCode='MDL_EXP_ACK'
+    status='OK'
+    status_description='Model Export Acknowledged'
+    print(status_description)
+    actionTracker.update_status(stepCode,status,status_description)
 
     model_config=actionTracker.get_job_params()
     
-    weights=download_from_s3(f'{actionTracker._idModel_str}/model_best.pt','matrice.dev.models','model.pt')
+    actionTracker.download_model(weights)
     
     print('model_config is' ,model_config)
 
-    include=model_config['export_formats']
+    include=actionTracker.action_details['exportFormats']
+
+    if include[0]=="tensorrt":
+        include[0]="engine"
+        device="0"
 
     t = time.time()
     include = [x.lower() for x in include]  # to lowercase
@@ -767,6 +782,12 @@ def run(
     assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}'
     jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle = flags  # export booleans
     file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
+
+    stepCode='MDL_EXP_STR'
+    status='OK'
+    status_description='Model Export Started'
+    print(status_description)
+    actionTracker.update_status(stepCode,status,status_description)
 
     # Load PyTorch model
     device = select_device(device)
@@ -857,54 +878,17 @@ def run(
                     f"\nValidate:        python {dir / 'val.py'} --weights {f[-1]} {h}"
                     f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{f[-1]}')  {s}"
                     f'\nVisualize:       https://netron.app')
+
     try_upload(actionTracker,f)
     return f  # return list of exported files/dirs
 
 
-def parse_opt(known=False):
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--action_id', help="Action Id to retrive all action details.",default='6574a7c41be52fe8c4e5bfa5')
-    parser.add_argument('--email', help="Email of your Matrice.ai account",default='mohned.moneam@matrice.ai')
-    parser.add_argument('--password', help="Password of your Matrice.ai account",default='mamoez12345#')
-
-    parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'model.pt', help='model.pt path(s)')
-    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640, 640], help='image (h, w)')
-    parser.add_argument('--batch-size', type=int, default=1, help='batch size')
-    parser.add_argument('--device', default='cpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--half', action='store_true', help='FP16 half-precision export')
-    parser.add_argument('--inplace', action='store_true', help='set YOLOv5 Detect() inplace=True')
-    parser.add_argument('--keras', action='store_true', help='TF: use Keras')
-    parser.add_argument('--optimize', action='store_true', help='TorchScript: optimize for mobile')
-    parser.add_argument('--int8', action='store_true', help='CoreML/TF/OpenVINO INT8 quantization')
-    parser.add_argument('--dynamic', action='store_true', help='ONNX/TF/TensorRT: dynamic axes')
-    parser.add_argument('--simplify', action='store_true', help='ONNX: simplify model')
-    parser.add_argument('--opset', type=int, default=17, help='ONNX: opset version')
-    parser.add_argument('--verbose', action='store_true', help='TensorRT: verbose log')
-    parser.add_argument('--workspace', type=int, default=4, help='TensorRT: workspace size (GB)')
-    parser.add_argument('--nms', action='store_true', help='TF: add NMS to model')
-    parser.add_argument('--agnostic-nms', action='store_true', help='TF: add agnostic NMS to model')
-    parser.add_argument('--topk-per-class', type=int, default=100, help='TF.js NMS: topk per class to keep')
-    parser.add_argument('--topk-all', type=int, default=100, help='TF.js NMS: topk for all classes to keep')
-    parser.add_argument('--iou-thres', type=float, default=0.45, help='TF.js NMS: IoU threshold')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='TF.js NMS: confidence threshold')
-    parser.add_argument(
-        '--include',
-        nargs='+',
-        default=['torchscript'],
-        help='torchscript, onnx, openvino, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle')
-    opt = parser.parse_known_args()[0] if known else parser.parse_args()
-    print_args(vars(opt))
-
-    return opt
 
 
-def main(opt):
 
-    run(**vars(opt))
-
-
-if __name__ == '__main__':
-    opt = parse_opt()
-    main(opt)
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 train.py <action_status_id>")
+        sys.exit(1)
+    action_status_id = sys.argv[1]
+    run(action_id=action_status_id)

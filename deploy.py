@@ -9,25 +9,28 @@ import uvicorn
 import threading
 
 
-from matrice_actiontracker import RPC
-from predict import load_model,predict 
-from python_common.services.rpc import Rpc
+from python_sdk.src.actionTracker import ActionTracker
+from python_sdk.matrice import Session
+from predict import load_model, predict 
 
 class MatriceModel:
 
-    def __init__(self, action_id, port):
+    def __init__(self, session, load_model, predict ,action_id, port):
         
         self.action_id = action_id
-        self.internal_rpc=Rpc()
-        self.action_doc=self.internal_rpc.get(f"/internal/v1/project/action/{self.action_id}/details")
-        self.action_details=self.action_doc['actionDetails']
+        self.rpc=session.rpc
+        self.actionTracker = ActionTracker(session,action_id)
+        
+        self.action_details=self.actionTracker.action_details 
         print(self.action_details)
-        self.rpc=RPC("mohned.moneam@matrice.ai",'mamoez12345#')
+
         self._idDeploymentInstance=self.action_details['_idModelDeployInstance']
         self._idDeployment=self.action_details['_idDeployment']
         self.model_id=self.action_details['_idModelDeploy']
         
-        
+        self.load_model = lambda actionTracker : load_model(actionTracker)
+        self.predict = lambda model, image : predict(model, image)
+
         self.model = None
         self.last_no_inference_time = -1
         self.shutdown_on_idle_threshold = int(self.action_details['shutdownThreshold']) *60 
@@ -52,10 +55,10 @@ class MatriceModel:
         port=80
         self.update_deployment_address()
         try:
-            self.update_status("deploy_add","deployment","MDL_DPL_STR", "OK", "Model deployment started")
+            self.actionTracker.update_status("MDL_DPL_STR", "OK", "Model deployment started")
             uvicorn.run(self.app, host=host, port=port)
         except:
-            self.update_status("deploy_add","deployment","ERROR", "ERROR", "Model deployment ERROR")
+            self.actionTracker.update_status("ERROR", "ERROR", "Model deployment ERROR")
 
 
     def get_ip(self):
@@ -67,32 +70,19 @@ class MatriceModel:
     def inference(self, image):
         
         if self.model is None:
-            self.model = load_model(self.model_id)
+            self.model = self.load_model(self.actionTracker)
 
         self.last_no_inference_time = -1
 
         try:
-            results = predict(self.model, image)
+            results = self.predict(self.model, image)
             print("Successfully ran inference")
             return results, True
         except Exception as e:
             print(f"ERROR: {e}")
             return None, False
             
-    def update_status(self, action,service_name,stepCode, status, status_description):
 
-        url= "/internal/v1/project/action"
-    
-        payload = {
-            "_id":self.action_id,
-            "action"  : action,
-            "serviceName": service_name,
-            "stepCode": stepCode,
-            "status":status,
-            "statusDescription":status_description,
-        }
-    
-        self.internal_rpc.put(url, payload)
 
     def trigger_shutdown_if_needed(self):
         if self.last_no_inference_time == -1:
@@ -103,7 +93,7 @@ class MatriceModel:
                 try:
                     print('Shutting down due to idle time exceeding the threshold.')
                     self.rpc.delete(f"/v1/deployment/delete_deploy_instance/{self._idDeploymentInstance}")
-                    self.update_status("deploy_add","deployment","MDL_DPL_STP", "OK", "Model deployment STOP")
+                    self.actionTracker.update_status("MDL_DPL_STP", "OK", "Model deployment STOP")
                     time.sleep(10)
                     os._exit(0)
                 except Exception as e:
@@ -148,5 +138,6 @@ if __name__ == "__main__":
     
     action_status_id = sys.argv[1]
     port=sys.argv[2]
-    x=MatriceModel(action_status_id,port)
+    session=Session()
+    x=MatriceModel(session,load_model, predict ,action_status_id,port)
     x.run_api()
