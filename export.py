@@ -730,9 +730,9 @@ def run(
         action_id,
         data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
         weights=ROOT / 'model.pt',  # weights path
-        imgsz=(640, 640),  # image (height, width)
+        imgsz=(224,224),  # image (height, width)
         batch_size=1,  # batch size
-        device='0',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+        device='cpu',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         include=('torchscript', 'onnx'),  # include formats
         half=False,  # FP16 half-precision export
         inplace=False,  # set YOLOv5 Detect() inplace=True
