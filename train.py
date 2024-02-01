@@ -21,6 +21,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
+from error_logging import error_log
 
 
 
@@ -111,6 +112,8 @@ def main(action_id):
     except Exception as e:
         status='ERROR'
         status_description='Error in loading data or model' + str(e)
+        error_log(e,action_id)
+        
 
     stepCode='MDL_TRN_DTL'
     print(status_description)
@@ -192,6 +195,7 @@ def main(action_id):
     except Exception as e:
         status = 'ERROR'
         status_description = 'Model training is completed but error in model saving or eval' + str(e)
+        error_log(e,action_id)
             
     stepCode='MDL_TRN_CMPL'
     

@@ -2,3 +2,11 @@
 	path = /content/ml_pytorch_vision_classification/python_sdk
 	url = https://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@github.com/matrice-ai/python-sdk.git
 	branch = dev
+[submodule "python-common"]
+	path = python-common
+	url = https://github.com/matrice-ai/python-common.git
+	branch = dev
+[submodule "python_sdk_"]
+	path = python_sdk_
+	url = https://github.com/matrice-ai/python-sdk.git
+	branch = dev

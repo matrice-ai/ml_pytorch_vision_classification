@@ -11,7 +11,8 @@ import threading
 
 from python_sdk.src.actionTracker import ActionTracker
 from python_sdk.matrice import Session
-from predict import load_model, predict 
+from predict import load_model, predict
+from error_logging import error_log
 
 class MatriceModel:
 
@@ -57,7 +58,8 @@ class MatriceModel:
         try:
             self.actionTracker.update_status("MDL_DPL_STR", "OK", "Model deployment started")
             uvicorn.run(self.app, host=host, port=port)
-        except:
+        except Exception as e:
+            error_log(e,action_status_id,)
             self.actionTracker.update_status("ERROR", "ERROR", "Model deployment ERROR")
 
 
@@ -80,6 +82,7 @@ class MatriceModel:
             return results, True
         except Exception as e:
             print(f"ERROR: {e}")
+            error_log(e,action_status_id)
             return None, False
             
 
@@ -98,6 +101,7 @@ class MatriceModel:
                     os._exit(0)
                 except Exception as e:
                     print(f"Error during shutdown: {e}")
+                    error_log(e,action_status_id)
                 os._exit(1)
             else:
                 print('Time since last inference:', elapsed_time)
