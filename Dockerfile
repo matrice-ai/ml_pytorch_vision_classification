@@ -1,16 +1,11 @@
-FROM pytorch/pytorch:2.1.1-cuda12.1-cudnn8-runtime
+FROM ubuntu:latest
 
-# Install python dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# Create working directory
-RUN mkdir -p /usr/src/
 WORKDIR /usr/src/
 
-# Copy contents
-COPY . /usr/src/
+COPY . .
 
-RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+RUN apt-get update \
+    && apt-get install -y ffmpeg libsm6 libxext6 python3 python3-pip \
+    && pip install  -r requirements.txt
 
-ENV OMP_NUM_THREADS=8
+ENV OMP_NUM_THREADS=4
