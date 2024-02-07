@@ -11,4 +11,4 @@ RUN apt-get update \
     && pip install  -r requirements.txt
 
 
-ENV OMP_NUM_THREADS=4
+ENV OMP_NUM_THREADS=8

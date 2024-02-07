@@ -3,8 +3,6 @@ torch
 torchvision
 boto3
 pymongo
-cloudpathlib
-s3fs
 numpy
 Pillow
 fastapi
@@ -34,3 +32,7 @@ opencv-python
 psutil
 PyYAML
 scipy
+zipfile
+onnx
+onnxruntime
+openvino
