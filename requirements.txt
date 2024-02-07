@@ -32,7 +32,6 @@ opencv-python
 psutil
 PyYAML
 scipy
-zipfile
 onnx
 onnxruntime
 openvino
