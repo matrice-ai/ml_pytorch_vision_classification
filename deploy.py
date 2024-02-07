@@ -24,6 +24,7 @@ def load_model(actionTracker):
             model=load_tensorrt(actionTracker)
         elif "openvino" in runtime_framework:
             model=load_openvino(actionTracker)
+        print(runtime_framework)
     except Exception as e:
         print(f"ERROR: {e}")
         model=load_pytorch(actionTracker)
@@ -31,6 +32,7 @@ def load_model(actionTracker):
         "framework": runtime_framework,
         "model": model
         }
+    
     return model_data
 
 def predict(model_data,image_bytes):
