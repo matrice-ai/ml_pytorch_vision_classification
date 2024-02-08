@@ -50,7 +50,8 @@ def main(action_id):
     model_config.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
 
     model = torch.load('model.pt', map_location='cpu')
-    
+    model_config.batch_size=32
+    model_config.workers=4
     train_loader, val_loader, test_loader = load_data(model_config)
     
     device = update_compute(model)

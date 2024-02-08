@@ -771,7 +771,7 @@ def run(
 
     include=actionTracker.action_details['exportFormats']
 
-    if include[0]=="tensorrt":
+    if include[0].lower()=="tensorrt":
         include[0]="engine"
         device="0"
 

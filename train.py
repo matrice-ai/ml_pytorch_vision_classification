@@ -145,7 +145,7 @@ def main(action_id):
         if is_best:
             best_model = model
             save_checkpoint({
-                'epoch': epoch + 1,
+                'epoch': epoch,
                 'arch': model_config.arch,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
@@ -160,7 +160,7 @@ def main(action_id):
                         {"splitType": "val", "metricName": "acc@1", "metricValue": acc1_val},
                         {"splitType": "val", "metricName": "acc@5", "metricValue": acc5_val}]
 
-        actionTracker.log_epoch_results(epoch + 1,epochDetails)
+        actionTracker.log_epoch_results(epoch ,epochDetails)
         print(epoch,epochDetails)
 
 
