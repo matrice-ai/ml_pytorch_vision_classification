@@ -224,9 +224,9 @@ def train(train_loader, model, criterion, optimizer, epoch, device, model_config
             acc5 = accuracy(output, target, topk=(5,))[0]
         except:
             if torch.cuda.is_available():
-                acc5 = torch.tensor([100]).cuda(model_config.gpu).item()
+                acc5 = torch.tensor([1]).cuda(model_config.gpu).item()
             else:
-                acc5 = torch.tensor([100]).item()
+                acc5 = torch.tensor([1]).item()
 
 
         total_loss += loss.item()
