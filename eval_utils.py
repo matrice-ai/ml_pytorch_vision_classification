@@ -29,9 +29,6 @@ from python_sdk.matrice import Session
 
 import zipfile
 from openvino.inference_engine import IECore
-import tensorrt as trt
-import pycuda.driver as cuda
-import pycuda.autoinit
 import time
 import onnx
 import onnxruntime
@@ -48,9 +45,9 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
             acc5 = accuracy(output, target, topk=(5,))[0]
         except:
             if torch.cuda.is_available():
-                acc5 = torch.tensor([100])
+                acc5 = torch.tensor([1])
             else:
-                acc5 = torch.tensor([100])
+                acc5 = torch.tensor([1])
 
         precision_all, recall_all, f1_score_all=calculate_metrics_for_all_classes(predictions,target)
         
@@ -200,6 +197,9 @@ def load_model(framework):
     if framework=='ONNX':
         model = onnxruntime.InferenceSession("model.onnx", None)
     elif framework=='TensorRT':
+        import tensorrt as trt
+        import pycuda.driver as cuda
+        import pycuda.autoinit
         model = load_engine("model.engine")
     elif framework=='OpenVINO':
         with zipfile.ZipFile("model_openvino.zip", 'r') as zip_ref:
