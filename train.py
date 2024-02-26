@@ -233,14 +233,14 @@ def train(train_loader, model, criterion, optimizer, epoch, device, model_config
         total_acc1 += acc1
         total_acc5 += acc5
 
-        # compute gradient and do SGD step
+        # compute gradient and do step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        avg_loss = total_loss / len(train_loader)
-        avg_acc1 = total_acc1 / len(train_loader)
-        avg_acc5 = total_acc5 / len(train_loader)
+    avg_loss = total_loss / len(train_loader)
+    avg_acc1 = total_acc1 / len(train_loader)
+    avg_acc5 = total_acc5 / len(train_loader)
 
     return avg_loss, avg_acc1, avg_acc5
 
@@ -248,7 +248,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, model_config
 
 def validate(val_loader, model, criterion, device, model_config):
 
-    def run_validate(loader, base_progress=0):
+    def run_validate(loader):
         total_loss = 0.0
         total_acc1 = 0.0
         total_acc5 = 0.0
@@ -256,7 +256,7 @@ def validate(val_loader, model, criterion, device, model_config):
         with torch.no_grad():
             end = time.time()
             for i, (images, target) in enumerate(loader):
-                i = base_progress + i
+                
 
                 images = images.to(device)
                 target = target.to(device)
@@ -271,9 +271,9 @@ def validate(val_loader, model, criterion, device, model_config):
                     acc5 = accuracy(output, target, topk=(5,))[0]
                 except:
                     if torch.cuda.is_available():
-                        acc5 = torch.tensor([100]).cuda(model_config.gpu).item()
+                        acc5 = torch.tensor([1]).cuda(model_config.gpu).item()
                     else:
-                        acc5 = torch.tensor([100]).item()
+                        acc5 = torch.tensor([1]).item()
 
                 total_loss += loss.item()
                 total_acc1 += acc1
@@ -439,31 +439,6 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.stop = True
                     
-class Summary(Enum):
-    NONE = 0
-    AVERAGE = 1
-    SUM = 2
-    COUNT = 3
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self, name, fmt=':f', summary_type=Summary.AVERAGE):
-        self.name = name
-        self.fmt = fmt
-        self.summary_type = summary_type
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
 
 
 def accuracy(output, target, topk=(1,)):
