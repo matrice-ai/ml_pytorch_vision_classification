@@ -90,9 +90,7 @@ def main(action_id):
     
     model_config = actionTracker.get_job_params()
     
-    _idDataset = model_config['_idDataset']
-    dataset_version = model_config['dataset_version']
-    model_config.data = f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
+    model_config.data = f'{model_config['dataset_path']}/images'
 
     update_with_defaults(model_config) # Just For testing it will be removed
     print('model_config is', model_config)
@@ -347,7 +345,7 @@ def load_data(model_config):
 
 def initialize_model(model_config, train_dataset):
     print("=> using pre-trained model '{}'".format(model_config.arch))
-    model = models.__dict__[model_config.arch](pretrained=True)
+    model = models.__dict__[model_config.arch](pretrained=True if model_config["model_checkpoint"] else False)
 
     num_classes = len(train_dataset.classes)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
