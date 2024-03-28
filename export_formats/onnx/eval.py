@@ -49,9 +49,7 @@ def main(action_id):
 
     model_config.batch_size=1
     model_config.workers=4
-    _idDataset=model_config['_idDataset']
-    dataset_version=model_config['dataset_version']
-    model_config.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
+    model_config.data=f'{model_config['dataset_path']}/images'
 
     model = onnxruntime.InferenceSession("model.onnx", None) #onnx.load("model.onnx")
     
