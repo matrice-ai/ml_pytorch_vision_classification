@@ -24,8 +24,8 @@ from torch.utils.data import Subset
 
 
 
-from python_sdk.src.actionTracker import ActionTracker
-from python_sdk.matrice import Session
+from python_sdk.src.matrice_sdk.actionTracker import ActionTracker
+from python_sdk.src.matrice_sdk.matrice import Session
 
 
 model_names = sorted(name for name in models.__dict__
