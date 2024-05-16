@@ -30,11 +30,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.ORG_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - name: Git clone with Submodule
-        run: |
-          git config --global url.https://$GH_ACCESS_USER:$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
-          git clone -b $ENV https://github.com/matrice-ai/python-sdk.git ./python_sdk
-          git submodule update --recursive
+      # - name: Git clone with Submodule
+      #   run: |
+      #     git config --global url.https://$GH_ACCESS_USER:$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+      #     git clone -b $ENV https://github.com/matrice-ai/python-sdk.git ./python_sdk
+      #     git submodule update --recursive
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1

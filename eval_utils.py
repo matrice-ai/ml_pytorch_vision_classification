@@ -24,8 +24,8 @@ from torch.utils.data import Subset
 
 
 
-from python_sdk.src.matrice_sdk.actionTracker import ActionTracker
-from python_sdk.src.matrice_sdk.matrice import Session
+from matrice_sdk.actionTracker import ActionTracker
+from matrice_sdk.matrice import Session
 
 import zipfile
 from openvino.inference_engine import IECore

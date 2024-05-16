@@ -23,8 +23,8 @@ from torch.utils.data import Subset
 
 
 
-from python_sdk.src.matrice_sdk.actionTracker import ActionTracker
-from python_sdk.src.matrice_sdk.matrice import Session
+from matrice_sdk.actionTracker import ActionTracker
+from matrice_sdk.matrice import Session
 from train import load_data, update_compute
 
 
