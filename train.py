@@ -90,7 +90,7 @@ def main(action_id):
     
     model_config = actionTracker.get_job_params()
     
-    model_config.data = f"{model_config['dataset_path']}/images"
+    model_config.data = f"workspace/{model_config['dataset_path']}/images"
 
     update_with_defaults(model_config) # Just For testing it will be removed
     print('model_config is', model_config)
