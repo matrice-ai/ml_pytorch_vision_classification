@@ -45,7 +45,7 @@ def main(action_id):
     
     print('model_config is' ,model_config)
 
-    model_config.data = f"{model_config['dataset_path']}/images"
+    model_config.data = f"workspace/{model_config['dataset_path']}/images"
 
     model = torch.load('model.pt', map_location='cpu')
     model_config.batch_size=32
