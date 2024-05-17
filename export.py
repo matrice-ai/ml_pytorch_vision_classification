@@ -751,8 +751,8 @@ def run(
         iou_thres=0.45,  # TF.js NMS: IoU threshold
         conf_thres=0.25,  # TF.js NMS: confidence threshold
 ):
-    from python_sdk.src.actionTracker import ActionTracker
-    from python_sdk.matrice import Session
+    from matrice_sdk.actionTracker import ActionTracker
+    from matrice_sdk.matrice import Session
 
     session=Session()
     actionTracker = ActionTracker(session,action_id)

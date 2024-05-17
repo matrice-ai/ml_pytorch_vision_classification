@@ -24,8 +24,8 @@ from torch.utils.data import Subset
 
 
 
-from python_sdk.src.actionTracker import ActionTracker
-from python_sdk.matrice import Session
+from matrice_sdk.actionTracker import ActionTracker
+from matrice_sdk.matrice import Session
 
 
 import onnx
@@ -49,7 +49,7 @@ def main(action_id):
 
     model_config.batch_size=1
     model_config.workers=4
-    model_config.data=f'{model_config['dataset_path']}/images'
+    model_config.data=f"workspace/{model_config['dataset_path']}/images"
 
     model = onnxruntime.InferenceSession("model.onnx", None) #onnx.load("model.onnx")
     
