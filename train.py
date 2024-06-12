@@ -21,7 +21,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
-
+from python_common.services.utils import log_error
 
 
 from matrice_sdk.actionTracker import ActionTracker
@@ -78,9 +78,19 @@ best_acc1 = 0
 
 def main(action_id):
     
-    global actionTracker
+    
     global best_acc1
-    actionTracker = ActionTracker(action_id)
+    
+    global actionTracker
+    actionTracker = None
+    model = None
+    
+    try:
+        actionTracker = ActionTracker(action_id)
+    except Exception as e:
+        log_error(__file__, 'main', f'Error initializing ActionTracker: {str(e)}')
+        print(f"Error initializing ActionTracker: {str(e)}")
+        sys.exit(1)
     
     stepCode='MDL_TRN_ACK'
     status='OK'
