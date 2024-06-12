@@ -96,7 +96,6 @@ def main(action_id):
     print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
     
-    #model_config = actionTracker.get_job_params()
     
     actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
 
