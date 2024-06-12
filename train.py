@@ -25,7 +25,6 @@ from torch.utils.data import Subset
 
 
 from matrice_sdk.actionTracker import ActionTracker
-from matrice_sdk.matrice import Session
 
 
 model_names = sorted(name for name in models.__dict__
@@ -78,9 +77,10 @@ best_acc1 = 0
 
 
 def main(action_id):
+    
+    global actionTracker
     global best_acc1
-    session=Session()
-    actionTracker = ActionTracker(session,action_id)
+    actionTracker = ActionTracker(action_id)
     
     stepCode='MDL_TRN_ACK'
     status='OK'
@@ -88,19 +88,19 @@ def main(action_id):
     print(status_description)
     actionTracker.update_status(stepCode,status,status_description)
     
-    model_config = actionTracker.get_job_params()
+    #model_config = actionTracker.get_job_params()
     
-    model_config.data = f"workspace/{model_config['dataset_path']}/images"
+    actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
 
-    update_with_defaults(model_config) # Just For testing it will be removed
-    print('model_config is', model_config)
+    update_with_defaults(actionTracker.model_config) # Just For testing it will be removed
+    print('model_config is', actionTracker.model_config)
 
     try:
-        train_loader, val_loader, test_loader = load_data(model_config)
+        train_loader, val_loader, test_loader = load_data(actionTracker.model_config)
         index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
         actionTracker.add_index_to_category(index_to_labels)
 
-        model = initialize_model(model_config, train_loader.dataset)
+        model = initialize_model(actionTracker.model_config, train_loader.dataset)
         
         device = update_compute(model)
         status='OK'
@@ -115,8 +115,8 @@ def main(action_id):
     actionTracker.update_status(stepCode,status,status_description)
 
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = setup_optimizer(model, model_config)
-    scheduler = setup_scheduler(optimizer, model_config)
+    optimizer = setup_optimizer(model, actionTracker.model_config)
+    scheduler = setup_scheduler(optimizer, actionTracker.model_config)
 
     stepCode='MDL_TRN_STRT'
     status='OK'
@@ -125,15 +125,15 @@ def main(action_id):
     actionTracker.update_status(stepCode,status,status_description)
 
     best_model = None
-    early_stopping=EarlyStopping(patience=model_config.patience,min_delta=model_config.min_delta)
+    early_stopping=EarlyStopping(patience=actionTracker.model_config.patience,min_delta=actionTracker.model_config.min_delta)
 
-    for epoch in range(model_config.epochs):
+    for epoch in range(actionTracker.model_config.epochs):
 
         # train for one epoch
-        loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
+        loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, actionTracker.model_config)
 
         # evaluate on validation set
-        loss_val,acc1_val,acc5_val= validate(val_loader, model, criterion,device, model_config)
+        loss_val,acc1_val,acc5_val= validate(val_loader, model, criterion,device, actionTracker.model_config)
 
         scheduler.step()
 
@@ -144,7 +144,7 @@ def main(action_id):
             best_model = model
             save_checkpoint({
                 'epoch': epoch,
-                'arch': model_config.arch,
+                'arch': actionTracker.model_config.arch,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
@@ -345,10 +345,18 @@ def load_data(model_config):
 
 def initialize_model(model_config, train_dataset):
     print("=> using pre-trained model '{}'".format(model_config.arch))
-    model = models.__dict__[model_config.model_key](pretrained=True if model_config["model_checkpoint"] else False)
+    
+    checkpoint_path, pretrained = actionTracker.checkpoint_path , actionTracker.pretrained
+    model = models.__dict__[model_config.model_key](pretrained=pretrained)
 
     num_classes = len(train_dataset.classes)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
+    
+    # Load the model from the checkpoint path if provided
+    if checkpoint_path:
+        checkpoint = torch.load(checkpoint_path)  
+        model.load_state_dict(checkpoint['state_dict'])
+        print("Model loaded from checkpoint:", checkpoint_path)
     
     return model
 
