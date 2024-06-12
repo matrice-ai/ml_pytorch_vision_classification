@@ -345,7 +345,7 @@ def load_data(model_config):
 
 def initialize_model(model_config, train_dataset):
     print("=> using pre-trained model '{}'".format(model_config.arch))
-    model = models.__dict__[model_config.arch](pretrained=True if model_config["model_checkpoint"] else False)
+    model = models.__dict__[model_config.model_key](pretrained=True if model_config["model_checkpoint"] else False)
 
     num_classes = len(train_dataset.classes)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
