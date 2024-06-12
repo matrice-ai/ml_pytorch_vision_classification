@@ -31,23 +31,24 @@ from train import load_data, update_compute
 
 def main(action_id):
 
-    session=Session()
-    actionTracker = ActionTracker(session,action_id)
     
-    stepCode='MDL_EVL_ACK'
-    status='OK'
-    status_description='Model Evaluation has acknowledged'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
-    
-    model_config=actionTracker.get_job_params()
+    actionTracker = ActionTracker(action_id)
+    try:
+        stepCode='MDL_EVL_ACK'
+        status='OK'
+        status_description='Model Evaluation has acknowledged'
+        print(status_description)
+        actionTracker.update_status(stepCode,status,status_description)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
     actionTracker.download_model('model.pt')
     
-    print('model_config is' ,model_config)
+    print('model_config is' ,actionTracker.model_config)
 
-    _idDataset=model_config['_idDataset']
-    dataset_version=model_config['dataset_version']
-    model_config.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
+    _idDataset=actionTracker.model_config['_idDataset']
+    dataset_version=actionTracker.model_config['dataset_version']
+    actionTracker.model_config.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
 
     model = torch.load('model.pt', map_location='cpu')
     
@@ -66,14 +67,14 @@ def main(action_id):
     index_to_labels=actionTracker.get_index_to_category()
     payload=[]
     
-    if 'train' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'train')):
+    if 'train' in actionTracker.model_config.split_types and os.path.exists(os.path.join(model_config.data, 'train')):
         payload+=get_metrics('train',train_loader, model,index_to_labels)
 
-    if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
+    if 'val' in actionTracker.model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
         payload+=get_metrics('val',val_loader, model,index_to_labels)
 
 
-    if 'test' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
+    if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
         payload+=get_metrics('test',test_loader, model,index_to_labels)
 
 
