@@ -90,14 +90,21 @@ def main(action_id):
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
     
-    stepCode='MDL_TRN_ACK'
-    status='OK'
-    status_description='Model Training has acknowledged'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    try:
+        actionTracker.update_status('MDL_TRN_ACK', 'OK', 'Model Training has acknowledged')
+    except Exception as e:
+        actionTracker.update_status('MDL_TRN_ERR', 'ERROR', f'Error in starting training: {str(e)}')
+        log_error(__file__, 'main', f'Error updating status to MDL_TRN_ACK: {str(e)}')
+        print(f"Error updating status to MDL_TRN_ACK: {str(e)}")
+        sys.exit(1)
     
-    
-    actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
+    try:
+        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
+    except Exception as e:
+        log_error(__file__, 'main', f'Error setting model config data: {str(e)}')
+        print(f"Error setting model config data: {str(e)}")
+        actionTracker.update_status('MDL_TRN_CONFIG', 'ERROR', f'Error setting model config data: {str(e)}')
+        sys.exit(1)
 
     update_with_defaults(actionTracker.model_config) # Just For testing it will be removed
     print('model_config is', actionTracker.model_config)
@@ -106,30 +113,25 @@ def main(action_id):
         train_loader, val_loader, test_loader = load_data(actionTracker.model_config)
         index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
         actionTracker.add_index_to_category(index_to_labels)
-
+        actionTracker.udpate_status('MDL_TRN_DTL', 'OK', 'Training dataset is loaded')
         model = initialize_model(actionTracker.model_config, train_loader.dataset)
-        
-        device = update_compute(model)
-        status='OK'
-        status_description='Training Dataset is loaded'
-
+        device = update_compute(model) 
     except Exception as e:
-        status='ERROR'
-        status_description='Error in loading data or model' + str(e)
+        actionTracker.update_status('MDL_TRN_DTL', 'ERROR', 'Error in loading training dataset')
+        log_error(__file__, 'main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
+        print(f"Error updating status to MDL_TRN_DTL: {str(e)}")
+        sys.exit(1)
 
-    stepCode='MDL_TRN_DTL'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
-
-    criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = setup_optimizer(model, actionTracker.model_config)
-    scheduler = setup_scheduler(optimizer, actionTracker.model_config)
-
-    stepCode='MDL_TRN_STRT'
-    status='OK'
-    status_description='Model Training has started'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    try:
+        criterion = nn.CrossEntropyLoss().to(device)
+        optimizer = setup_optimizer(model, actionTracker.model_config)
+        scheduler = setup_scheduler(optimizer, actionTracker.model_config)
+        actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
+    except Exception as e:
+        actionTracker.update_status('MDL_TRN_SETUP', 'ERROR', 'Error in setting up model training')
+        log_error(__file__, 'main', f'Error updating status to MDL_TRN_STRT: {str(e)}')
+        print(f"Error updating status to MDL_TRN_STRT: {str(e)}")
+        sys.exit(1)
 
     best_model = None
     early_stopping=EarlyStopping(patience=actionTracker.model_config.patience,min_delta=actionTracker.model_config.min_delta)
@@ -157,16 +159,22 @@ def main(action_id):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, model,is_best)
-                    
-        epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
-                        {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
-                        {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
-                        {"splitType": "val", "metricName": "loss", "metricValue": loss_val},
-                        {"splitType": "val", "metricName": "acc@1", "metricValue": acc1_val},
-                        {"splitType": "val", "metricName": "acc@5", "metricValue": acc5_val}]
+           
+        try:            
+            epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
+                            {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
+                            {"splitType": "train", "metricName": "acc@5", "metricValue": acc5_train},
+                            {"splitType": "val", "metricName": "loss", "metricValue": loss_val},
+                            {"splitType": "val", "metricName": "acc@1", "metricValue": acc1_val},
+                            {"splitType": "val", "metricName": "acc@5", "metricValue": acc5_val}]
 
-        actionTracker.log_epoch_results(epoch ,epochDetails)
-        print(epoch,epochDetails)
+            actionTracker.log_epoch_results(epoch ,epochDetails)
+            
+        except Exception as e:
+            actionTracker.update_status('MDL_TRN_EPOCH', 'ERROR', 'Error in logging training epoch details')
+            log_error(__file__, 'main', f'Error updating status to MDL_TRN_EPOCH: {str(e)}')
+            print(f"Error updating status to MDL_TRN_EPOCH: {str(e)}")
+            sys.exit(1)   
 
 
         early_stopping.update(loss_val)
@@ -177,31 +185,36 @@ def main(action_id):
 
     
     try:
+        ## For using as a checkpoint for training other models
         actionTracker.upload_checkpoint('model_best.pth.tar')
+        
+        ## For exporting, evaluation and deployment
+        torch.save(best_model, 'model_best.pt')
         actionTracker.upload_checkpoint('model_best.pt')
+    except:
+        actionTracker.update_status('MDL_TRN_SBM', 'ERROR', 'Error in saving the best model')    
    
-        from eval import get_metrics
+    from eval import get_metrics
 
+    try:
         payload=[]
-
+        ## Run on validation set
         if  os.path.exists(valdir):
             payload+=get_metrics('val',val_loader, best_model, index_to_labels)
-
+        ## Run on test set
         if  os.path.exists(testdir):
             payload+=get_metrics('test',test_loader, best_model, index_to_labels)
         
         actionTracker.save_evaluation_results(payload)
-        status = 'SUCCESS'
-        status_description='Model Training is completed'
+        actionTracker.update_status('MDL_TRN_SUCCESS', 'SUCCESS', 'Model training is successfully completed')
     
     except Exception as e:
-        status = 'ERROR'
-        status_description = 'Model training is completed but error in model saving or eval' + str(e)
+        actionTracker.udpate_status('MDL_TRN_EVAL', 'ERROR', 'Error in evaluation using the best model')
+        log_error(__file__, 'main', f'Error updating status to MDL_TRN_EVAL: {str(e)}')
+        print(f"Error updating status to MDL_TRN_EVAL: {str(e)}")
+        sys.exit(1) 
             
-    stepCode='MDL_TRN_CMPL'
     
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
     
 def train(train_loader, model, criterion, optimizer, epoch, device, model_config):
 
@@ -352,18 +365,23 @@ def load_data(model_config):
 
 def initialize_model(model_config, train_dataset):
     print("=> using pre-trained model '{}'".format(model_config.arch))
-    
-    checkpoint_path, pretrained = actionTracker.checkpoint_path , actionTracker.pretrained
-    model = models.__dict__[model_config.model_key](pretrained=pretrained)
+    try:
+        checkpoint_path, pretrained = actionTracker.checkpoint_path , actionTracker.pretrained
+        model = models.__dict__[model_config.model_key](pretrained=pretrained)
+        
+        # Load the model from the checkpoint path if provided
+        if checkpoint_path:
+            checkpoint = torch.load(checkpoint_path)  
+            model.load_state_dict(checkpoint['state_dict'])
+            print("Model loaded from checkpoint:", checkpoint_path)
 
-    num_classes = len(train_dataset.classes)
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
-    
-    # Load the model from the checkpoint path if provided
-    if checkpoint_path:
-        checkpoint = torch.load(checkpoint_path)  
-        model.load_state_dict(checkpoint['state_dict'])
-        print("Model loaded from checkpoint:", checkpoint_path)
+        num_classes = len(train_dataset.classes)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
+        
+    except:
+        actionTracker.update_status('MDL_TRN_MDL', 'ERROR', 'Error in loading model')
+        
     
     return model
 
