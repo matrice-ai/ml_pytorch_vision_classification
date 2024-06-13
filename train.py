@@ -156,7 +156,8 @@ def main(action_id):
         # remember best acc@1 and save checkpoint
         is_best = acc1_val > best_acc1
         best_acc1 = max(acc1_val, best_acc1)
-           
+        
+        # Logging training details   
         try:            
             epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
                             {"splitType": "train", "metricName": "acc@1", "metricValue": acc1_train},
@@ -191,7 +192,7 @@ def main(action_id):
 
     
 
-    # Evaluation of model 
+    # Saving the best model and checkpoint 
     try:
         ## For using as a checkpoint for training other models
         actionTracker.upload_checkpoint('model_best.pth.tar')
@@ -202,6 +203,7 @@ def main(action_id):
     except:
         actionTracker.update_status('MDL_TRN_SBM', 'ERROR', 'Error in saving the best model')    
    
+    # Evaluation of model
     from eval import get_metrics
 
     try:
