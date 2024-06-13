@@ -31,7 +31,7 @@ from train import load_data, update_compute
 
 def main(action_id):
 
-    
+    # Initializing the ActionTracker
     try:
         actionTracker = ActionTracker(action_id)
     except Exception as e:
@@ -39,6 +39,7 @@ def main(action_id):
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
     
+    # Starting model evaluation
     try:
         actionTracker.update_status('MDL_EVL_ACK', 'OK', 'Model Evaluation has acknowledged')
     except Exception as e:
@@ -47,39 +48,50 @@ def main(action_id):
         print(f"Error updating status to MDL_EVL_ACK: {str(e)}")
         sys.exit(1)
     
+    # Loading Test Data   
+    try:
+        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
+        val_loader, test_loader = load_data(actionTracker.model_config) 
+        actionTracker.udpate_status('MDL_EVL_DTL', 'OK', 'Testing dataset is loaded')  
+        
+    except Exception as e:
+        actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in loading dataset: {str(e)}')
+        log_error(__file__, 'main', f'Error updating status to MDL_EVL_DTL: {str(e)}')
+        print(f"Error updating status to MDL_EVL_DTL: {str(e)}")
+        sys.exit(1)
+    
+    # Loading model
     try:
         actionTracker.download_model('model.pt')
         print('model_config is' ,actionTracker.model_config)
-        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
         model = torch.load('model.pt', map_location='cpu')
         actionTracker.model_config.batch_size=32
         actionTracker.model_config.workers=4
-        train_loader, val_loader, test_loader = load_data(actionTracker.model_config)
         device = update_compute(model)
         criterion = nn.CrossEntropyLoss().to(device)
         actionTracker.update_status('MDL_EVL_STRT','OK','Model Evaluation has started')
+        
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in starting Evaluation: {str(e)}')
         log_error(__file__, 'main', f'Error updating status to MDL_EVL_STRT: {str(e)}')
         print(f"Error updating status to MDL_EVL_STRT: {str(e)}")
         sys.exit(1)
 
+    # Evaluating on test dataset
     try:
         index_to_labels=actionTracker.get_index_to_category()
         payload=[]
         
-
         if 'val' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'val')):
             payload+=get_metrics('val',val_loader, model,index_to_labels)
-
 
         if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'test')):
             payload+=get_metrics('test',test_loader, model,index_to_labels)
 
-
         actionTracker.save_evaluation_results(payload)
         actionTracker.update_status('MDL_EVL_CMPL','SUCCESS','Model Evaluation is completed')
         print(payload)
+        
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in completing Evaluation: {str(e)}')
         log_error(__file__, 'main', f'Error updating status to MDL_EVL_CMPL: {str(e)}')
