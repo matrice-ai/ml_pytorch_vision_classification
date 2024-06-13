@@ -32,7 +32,7 @@ model_names = sorted(name for name in models.__dict__
     and callable(models.__dict__[name]))
 
 
-# Just For testing it will be removed #move to action tracker
+# Just For testing it will be removed 
 def update_with_defaults(model_config):
     default_values = {
         'arch': 'resnet18',
@@ -81,6 +81,7 @@ def main(action_id):
     global best_acc1
     global actionTracker
      
+    # Initializing ActionTracker 
     try:
         actionTracker = ActionTracker(action_id)
     except Exception as e:
@@ -88,6 +89,7 @@ def main(action_id):
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
     
+    # Acknowledging the model training
     try:
         actionTracker.update_status('MDL_TRN_ACK', 'OK', 'Model Training has acknowledged')
     except Exception as e:
@@ -100,6 +102,7 @@ def main(action_id):
     update_with_defaults(actionTracker.model_config) # Just For testing it will be removed
     print('model_config is', actionTracker.model_config)
 
+    # Loading the data
     try:
         actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
         train_loader, val_loader, test_loader = actionTracker.load_data(actionTracker.model_config)
@@ -112,7 +115,8 @@ def main(action_id):
         log_error(__file__, 'main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
         print(f"Error updating status to MDL_TRN_DTL: {str(e)}")
         sys.exit(1)
-        
+    
+    # Initializing model    
     try: 
         model = initialize_model(actionTracker.model_config, train_loader.dataset)
         device = update_compute(model)
@@ -123,7 +127,7 @@ def main(action_id):
         print(f"Error updating status to MDL_TRN_MDL: {str(e)}")
         sys.exit(1)
             
-
+    # Setting up the training of the model
     try:
         criterion = nn.CrossEntropyLoss().to(device)
         optimizer = setup_optimizer(model, actionTracker.model_config)
@@ -152,16 +156,6 @@ def main(action_id):
         # remember best acc@1 and save checkpoint
         is_best = acc1_val > best_acc1
         best_acc1 = max(acc1_val, best_acc1)
-        if is_best:
-            best_model = model
-            save_checkpoint({
-                'epoch': epoch,
-                'arch': actionTracker.model_config.arch,
-                'state_dict': model.state_dict(),
-                'best_acc1': best_acc1,
-                'optimizer' : optimizer.state_dict(),
-                'scheduler' : scheduler.state_dict()
-            }, model,is_best)
            
         try:            
             epochDetails= [{"splitType": "train", "metricName": "loss", "metricValue":loss_train},
@@ -177,7 +171,18 @@ def main(action_id):
             actionTracker.update_status('MDL_TRN_EPOCH', 'ERROR', 'Error in logging training epoch details')
             log_error(__file__, 'main', f'Error updating status to MDL_TRN_EPOCH: {str(e)}')
             print(f"Error updating status to MDL_TRN_EPOCH: {str(e)}")
-            sys.exit(1)   
+            sys.exit(1) 
+        
+        if is_best:
+            best_model = model
+            save_checkpoint({
+                'epoch': epoch,
+                'arch': actionTracker.model_config.arch,
+                'state_dict': model.state_dict(),
+                'best_acc1': best_acc1,
+                'optimizer' : optimizer.state_dict(),
+                'scheduler' : scheduler.state_dict()
+            }, model,is_best)  
 
 
         early_stopping.update(loss_val)
@@ -186,7 +191,7 @@ def main(action_id):
 
     
 
-    
+    # Evaluation of model 
     try:
         ## For using as a checkpoint for training other models
         actionTracker.upload_checkpoint('model_best.pth.tar')
@@ -312,7 +317,7 @@ def validate(val_loader, model, criterion, device, model_config):
 
     return loss, acc1, acc5
 
-#Move to action tracker
+
 def load_data(model_config):
     global traindir, valdir, testdir
     traindir = os.path.join(model_config.data, 'train')
