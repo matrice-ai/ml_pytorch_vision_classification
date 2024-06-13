@@ -21,40 +21,40 @@ import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
 
-
+#add Try Catch blocks
 
 from python_sdk.src.actionTracker import ActionTracker
-from python_sdk.matrice import Session
+#from python_sdk.matrice import Session
 from train import load_data, update_compute
 
 
 
 def main(action_id):
-
-    
     actionTracker = ActionTracker(action_id)
     try:
         stepCode='MDL_EVL_ACK'
         status='OK'
         status_description='Model Evaluation has acknowledged'
         print(status_description)
-        actionTracker.update_status(stepCode,status,status_description)
+        actionTracker.update_status(stepCode,status,status_description) 
+        #Above can be done in a single line
     except Exception as e:
+        #Update status as error
         print(f"An error occurred: {e}")
 
-    actionTracker.download_model('model.pt')
+    actionTracker.download_model('model.pt') #Inside a try catch block
     
     print('model_config is' ,actionTracker.model_config)
 
-    _idDataset=actionTracker.model_config['_idDataset']
+    _idDataset=actionTracker.model_config['_idDataset'] 
     dataset_version=actionTracker.model_config['dataset_version']
-    actionTracker.model_config.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images'
+    actionTracker.model_config.data=f'workspace/{str(_idDataset)}-{str(dataset_version).lower()}-imagenet/images' #Get the images directly 
 
-    model = torch.load('model.pt', map_location='cpu')
+    model = torch.load('model.pt', map_location='cpu') #Try catch block 
     
-    train_loader, val_loader, test_loader = load_data(model_config)
+    train_loader, val_loader, test_loader = load_data(model_config) #Try catch block
     
-    device = update_compute(model)
+    device = update_compute(model) #Try catch block
     
     criterion = nn.CrossEntropyLoss().to(device)
     
@@ -62,7 +62,7 @@ def main(action_id):
     status='OK'
     status_description='Model Evaluation has started'
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(stepCode,status,status_description) # COmplete the above in a single line
 
     index_to_labels=actionTracker.get_index_to_category()
     payload=[]
@@ -76,20 +76,20 @@ def main(action_id):
 
     if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
         payload+=get_metrics('test',test_loader, model,index_to_labels)
+#Try catch block
 
-
-    actionTracker.save_evaluation_results(payload)
+    actionTracker.save_evaluation_results(payload) #Try catch block
     
     stepCode='MDL_EVL_CMPL'
     status='SUCCESS'
     status_description='Model Evaluation is completed'
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(stepCode,status,status_description) # DOne in single line + Try catch block
     
     print(payload)
 
 
-from model_metrics import accuracy,precision,recall,f1_score_per_class,specificity,calculate_metrics_for_all_classes,specificity_all
+from model_metrics import accuracy,precision,recall,f1_score_per_class,specificity,calculate_metrics_for_all_classes,specificity_all #Move this to the start
 
 def get_evaluation_results(split,predictions,output,target,index_to_labels):
     
@@ -99,7 +99,7 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
 
         try:
             acc5 = accuracy(output, target, topk=(5,))[0]
-        except:
+        except: #Error logging
             if torch.cuda.is_available():
                 acc5 = torch.tensor([100])
             else:
@@ -200,7 +200,7 @@ def get_metrics(split, data_loader, model, index_to_labels):
                     images = images.cuda(0, non_blocking=True)
                     target = target.cuda(0, non_blocking=True)
 
-                output = model(images)
+                output = model(images) #Try catch block
                 predictions = torch.argmax(output, dim=1)
 
                 all_predictions.append(predictions)
