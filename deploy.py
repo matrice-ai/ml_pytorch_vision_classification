@@ -2,7 +2,7 @@ import sys
 import subprocess
 from matrice_sdk.deploy import MatriceDeploy
 from python_sdk.src.actionTracker import ActionTracker
-from python_sdk.matrice import Session
+#from python_sdk.matrice import Session
 
 from export_formats.openvino.predict import load_model as load_openvino, predict as predict_openvino
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
@@ -55,14 +55,14 @@ def predict(model_data,image_bytes):
     return predictions
 
 def main(action_id, port):
-    session = Session()
-    actionTracker = ActionTracker(session, action_id)
+    actionTracker = ActionTracker(action_id)
     try:
         x = MatriceDeploy(session, load_model, predict, action_id, port)
         x.start_server()
-        actionTracker.update_status('MDL_DPY_ACK', 'OK', 'Model Deployment has been acknowledged')
+        actionTracker.update_status('xyz', 'OK', 'Model Deployment has been acknowledged')
     except Exception as e:
         actionTracker.update_status('MDL_DPY_ACK', 'ERROR', 'Error in model deployment : ' + str(e))
+        sys.exit(1)
         return
 
 
