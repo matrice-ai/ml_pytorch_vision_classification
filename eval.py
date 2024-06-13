@@ -20,69 +20,70 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
+from python_common.services.utils import log_error
 
 
 
 from matrice_sdk.actionTracker import ActionTracker
-from matrice_sdk.matrice import Session
 from train import load_data, update_compute
 
 
 
 def main(action_id):
 
-    session=Session()
-    actionTracker = ActionTracker(session,action_id)
     
-    stepCode='MDL_EVL_ACK'
-    status='OK'
-    status_description='Model Evaluation has acknowledged'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    try:
+        actionTracker = ActionTracker(action_id)
+    except Exception as e:
+        log_error(__file__, 'main', f'Error initializing ActionTracker: {str(e)}')
+        print(f"Error initializing ActionTracker: {str(e)}")
+        sys.exit(1)
     
-    model_config=actionTracker.get_job_params()
+    try:
+        actionTracker.update_status('MDL_EVL_ACK', 'OK', 'Model Training has acknowledged')
+    except Exception as e:
+        actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in starting training: {str(e)}')
+        log_error(__file__, 'main', f'Error updating status to MDL_EVL_ACK: {str(e)}')
+        print(f"Error updating status to MDL_EVL_ACK: {str(e)}")
+        sys.exit(1)
+    
+    
     actionTracker.download_model('model.pt')
     
-    print('model_config is' ,model_config)
+    print('model_config is' ,actionTracker.model_config)
 
-    model_config.data = f"workspace/{model_config['dataset_path']}/images"
+    actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
 
     model = torch.load('model.pt', map_location='cpu')
-    model_config.batch_size=32
-    model_config.workers=4
-    train_loader, val_loader, test_loader = load_data(model_config)
+    actionTracker.model_config.batch_size=32
+    actionTracker.model_config.workers=4
+    train_loader, val_loader, test_loader = load_data(actionTracker.model_config)
     
     device = update_compute(model)
     
     criterion = nn.CrossEntropyLoss().to(device)
     
-    stepCode='MDL_EVL_STRT'
-    status='OK'
-    status_description='Model Evaluation has started'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+
+    actionTracker.update_status('MDL_EVL_STRT','OK','Model Evaluation has started')
 
     index_to_labels=actionTracker.get_index_to_category()
     payload=[]
     
-    if 'train' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'train')):
+    if 'train' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'train')):
         payload+=get_metrics('train',train_loader, model,index_to_labels)
 
-    if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
+    if 'val' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'val')):
         payload+=get_metrics('val',val_loader, model,index_to_labels)
 
 
-    if 'test' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
+    if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'test')):
         payload+=get_metrics('test',test_loader, model,index_to_labels)
 
 
     actionTracker.save_evaluation_results(payload)
     
-    stepCode='MDL_EVL_CMPL'
-    status='SUCCESS'
-    status_description='Model Evaluation is completed'
-    print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    
+    actionTracker.update_status('MDL_EVL_CMPL','SUCCESS','Model Evaluation is completed')
     
     print(payload)
 

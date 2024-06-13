@@ -80,9 +80,7 @@ def main(action_id):
     
     global best_acc1
     global actionTracker
-    #actionTracker = None
-    #model = None
-    
+     
     try:
         actionTracker = ActionTracker(action_id)
     except Exception as e:
