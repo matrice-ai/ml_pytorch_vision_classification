@@ -32,7 +32,7 @@ model_names = sorted(name for name in models.__dict__
     and callable(models.__dict__[name]))
 
 
-# Just For testing it will be removed
+# Just For testing it will be removed #move to action tracker
 def update_with_defaults(model_config):
     default_values = {
         'arch': 'resnet18',
@@ -80,8 +80,8 @@ def main(action_id):
     
     global best_acc1
     global actionTracker
-    actionTracker = None
-    model = None
+    #actionTracker = None
+    #model = None
     
     try:
         actionTracker = ActionTracker(action_id)
@@ -110,7 +110,7 @@ def main(action_id):
     print('model_config is', actionTracker.model_config)
 
     try:
-        train_loader, val_loader, test_loader = load_data(actionTracker.model_config)
+        train_loader, val_loader, test_loader = actionTracker.load_data(actionTracker.model_config)
         index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
         actionTracker.add_index_to_category(index_to_labels)
         actionTracker.udpate_status('MDL_TRN_DTL', 'OK', 'Training dataset is loaded')
@@ -309,6 +309,7 @@ def validate(val_loader, model, criterion, device, model_config):
 
     return loss, acc1, acc5
 
+#Move to action tracker
 def load_data(model_config):
     global traindir, valdir, testdir
     traindir = os.path.join(model_config.data, 'train')
