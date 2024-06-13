@@ -2,7 +2,6 @@ import sys
 import subprocess
 from matrice_sdk.deploy import MatriceDeploy
 from python_sdk.src.actionTracker import ActionTracker
-#from python_sdk.matrice import Session
 
 from export_formats.openvino.predict import load_model as load_openvino, predict as predict_openvino
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
@@ -26,8 +25,10 @@ def load_model(actionTracker):
             model=load_openvino(actionTracker)
         print(runtime_framework)
     except Exception as e:
-        print(f"ERROR: {e}")
         model=load_pytorch(actionTracker)
+        print(f"ERROR: {e}")
+        actionTracker.update_status('MDL_LOAD_ERR', 'ERROR', f'Error in model loading: {str(e)}')
+        sys.exit(1)
     model_data={
         "framework": runtime_framework,
         "model": model
@@ -52,6 +53,7 @@ def predict(model_data,image_bytes):
     except Exception as e:
         actionTracker.update_status('MDL_PREDICT', 'ERROR', f'Error during prediction: {str(e)}')
         predictions=predict_pytorch(model,image_bytes) # To make pytorch prediction not effected even new update make errors
+        sys.exit(1)
     return predictions
 
 def main(action_id, port):
