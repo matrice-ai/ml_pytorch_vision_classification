@@ -1,0 +1,36 @@
+# test_config.yaml
+action_id: "test_action_id"
+
+hyperparameters:
+  arch: resnet18
+  workers: 4
+  epochs: 2
+  patience: 5
+  min_delta: 0.5
+  opt: sgd
+  lr_scheduler: steplr
+  lr_step_size: 30
+  lr_gamma: 0.1
+  lr_min: 0.0
+  start_epoch: 0
+  batch_size: 32
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 1e-4
+  print_freq: 10
+  resume: ""
+  evaluate: false
+  pretrained: true
+  world_size: -1
+  rank: -1
+  dist_url: "tcp://224.66.41.62:23456"
+  dist_backend: nccl
+  seed: null
+  gpu: null
+  multiprocessing_distributed: false
+  dummy: false
+
+data_paths:
+  train: /path/to/train_dataset
+  val: /path/to/validation_dataset
+  test: /path/to/test_dataset

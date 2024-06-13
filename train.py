@@ -20,8 +20,8 @@ import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
 
-from python_sdk.src.actionTracker import ActionTracker
-from python_sdk.matrice import Session
+from matrice_sdk.src.actionTracker import ActionTracker
+from matrice_sdk.src.matrice import Session
 
 # List of available model names in torchvision.models
 model_names = sorted(name for name in models.__dict__
@@ -32,7 +32,7 @@ model_names = sorted(name for name in models.__dict__
 DEFAULT_CONFIG = {
     'arch': 'resnet18',
     'workers': 4,
-    'epochs': 2,
+    'epochs': 2,    
     'patience': 5,
     'min_delta': 0.5,
     'opt': 'sgd',
