@@ -64,23 +64,29 @@ def main(action_id):
         print(f"Error updating status to MDL_EVL_STRT: {str(e)}")
         sys.exit(1)
 
-    index_to_labels=actionTracker.get_index_to_category()
-    payload=[]
-    
-    if 'train' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'train')):
-        payload+=get_metrics('train',train_loader, model,index_to_labels)
+    try:
+        index_to_labels=actionTracker.get_index_to_category()
+        payload=[]
+        
+        if 'train' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'train')):
+            payload+=get_metrics('train',train_loader, model,index_to_labels)
 
-    if 'val' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'val')):
-        payload+=get_metrics('val',val_loader, model,index_to_labels)
-
-
-    if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'test')):
-        payload+=get_metrics('test',test_loader, model,index_to_labels)
+        if 'val' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'val')):
+            payload+=get_metrics('val',val_loader, model,index_to_labels)
 
 
-    actionTracker.save_evaluation_results(payload)
-    actionTracker.update_status('MDL_EVL_CMPL','SUCCESS','Model Evaluation is completed')
-    print(payload)
+        if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'test')):
+            payload+=get_metrics('test',test_loader, model,index_to_labels)
+
+
+        actionTracker.save_evaluation_results(payload)
+        actionTracker.update_status('MDL_EVL_CMPL','SUCCESS','Model Evaluation is completed')
+        print(payload)
+    except Exception as e:
+        actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in completing Evaluation: {str(e)}')
+        log_error(__file__, 'main', f'Error updating status to MDL_EVL_CMPL: {str(e)}')
+        print(f"Error updating status to MDL_EVL_CMPL: {str(e)}")
+        sys.exit(1)    
 
 
 from model_metrics import accuracy,precision,recall,f1_score_per_class,specificity,calculate_metrics_for_all_classes,specificity_all
