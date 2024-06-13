@@ -1,21 +1,28 @@
 from PIL import Image
 from io import BytesIO
+import sys
 import torch
 from torchvision import transforms
 import numpy as np
-
+from python_common.services.utils import log_error
 import torch.nn.functional as F
 
 def load_model(actionTracker):
-    actionTracker.download_model("model.pt")
-    model = torch.load('model.pt', map_location='cpu')
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device is :{device}")
-    model = model.to(device)
-
-    model.eval()
-    return model
+    try:
+        actionTracker.download_model("model.pt")
+        model = torch.load('model.pt', map_location='cpu')
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Device is :{device}")
+        model = model.to(device)
+        model.eval()
+        actionTracker.update_status('MDL_PRED_STRT', 'OK', 'Model loaded for prediction')
+        return model
+    
+    except Exception as e:
+        actionTracker.update_status('MDL_PRED_ERR', 'ERROR', 'Error in loading model')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_PRED_STRT: {str(e)}')
+        print(f"Error updating status to MDL_PRED_STRT: {str(e)}")
+        sys.exit(1)
 
 def predict(model, image_bytes):
     # Convert image bytes to PIL Image
