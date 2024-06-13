@@ -85,7 +85,7 @@ def main(action_id):
     try:
         actionTracker = ActionTracker(action_id)
     except Exception as e:
-        log_error(__file__, 'main', f'Error initializing ActionTracker: {str(e)}')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
     
@@ -94,7 +94,7 @@ def main(action_id):
         actionTracker.update_status('MDL_TRN_ACK', 'OK', 'Model Training has acknowledged')
     except Exception as e:
         actionTracker.update_status('MDL_TRN_ERR', 'ERROR', f'Error in starting training: {str(e)}')
-        log_error(__file__, 'main', f'Error updating status to MDL_TRN_ACK: {str(e)}')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_ACK: {str(e)}')
         print(f"Error updating status to MDL_TRN_ACK: {str(e)}")
         sys.exit(1)
     
@@ -112,7 +112,7 @@ def main(action_id):
         
     except Exception as e:
         actionTracker.update_status('MDL_TRN_DTL', 'ERROR', 'Error in loading training dataset')
-        log_error(__file__, 'main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
         print(f"Error updating status to MDL_TRN_DTL: {str(e)}")
         sys.exit(1)
     
@@ -123,7 +123,7 @@ def main(action_id):
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded') 
     except Exception as e:
         actionTracker.update_status('MDL_TRN_MDL', 'ERROR', 'Error in loading model')
-        log_error(__file__, 'main', f'Error updating status to MDL_TRN_MDL: {str(e)}')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_MDL: {str(e)}')
         print(f"Error updating status to MDL_TRN_MDL: {str(e)}")
         sys.exit(1)
             
@@ -136,7 +136,7 @@ def main(action_id):
         
     except Exception as e:
         actionTracker.update_status('MDL_TRN_SETUP', 'ERROR', 'Error in setting up model training')
-        log_error(__file__, 'main', f'Error updating status to MDL_TRN_STRT: {str(e)}')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_STRT: {str(e)}')
         print(f"Error updating status to MDL_TRN_STRT: {str(e)}")
         sys.exit(1)
 
@@ -170,7 +170,7 @@ def main(action_id):
             
         except Exception as e:
             actionTracker.update_status('MDL_TRN_EPOCH', 'ERROR', 'Error in logging training epoch details')
-            log_error(__file__, 'main', f'Error updating status to MDL_TRN_EPOCH: {str(e)}')
+            log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EPOCH: {str(e)}')
             print(f"Error updating status to MDL_TRN_EPOCH: {str(e)}")
             sys.exit(1) 
         
@@ -220,7 +220,7 @@ def main(action_id):
     
     except Exception as e:
         actionTracker.udpate_status('MDL_TRN_EVAL', 'ERROR', 'Error in evaluation using the best model')
-        log_error(__file__, 'main', f'Error updating status to MDL_TRN_EVAL: {str(e)}')
+        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EVAL: {str(e)}')
         print(f"Error updating status to MDL_TRN_EVAL: {str(e)}")
         sys.exit(1) 
             

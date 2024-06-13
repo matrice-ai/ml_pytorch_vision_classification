@@ -50,6 +50,7 @@ def predict(model_data,image_bytes):
             predictions=predict_tensorrt(model,image_bytes)
         elif "openvino" in runtime_framework:
             predictions=predict_openvino(model,image_bytes)
+            
     except Exception as e:
         actionTracker.update_status('MDL_PREDICT', 'ERROR', f'Error during prediction: {str(e)}')
         predictions=predict_pytorch(model,image_bytes) # To make pytorch prediction not effected even new update make errors
