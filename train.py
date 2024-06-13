@@ -96,35 +96,40 @@ def main(action_id):
         print(f"Error updating status to MDL_TRN_ACK: {str(e)}")
         sys.exit(1)
     
-    try:
-        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
-    except Exception as e:
-        log_error(__file__, 'main', f'Error setting model config data: {str(e)}')
-        print(f"Error setting model config data: {str(e)}")
-        actionTracker.update_status('MDL_TRN_CONFIG', 'ERROR', f'Error setting model config data: {str(e)}')
-        sys.exit(1)
 
     update_with_defaults(actionTracker.model_config) # Just For testing it will be removed
     print('model_config is', actionTracker.model_config)
 
     try:
+        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
         train_loader, val_loader, test_loader = actionTracker.load_data(actionTracker.model_config)
         index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
         actionTracker.add_index_to_category(index_to_labels)
         actionTracker.udpate_status('MDL_TRN_DTL', 'OK', 'Training dataset is loaded')
-        model = initialize_model(actionTracker.model_config, train_loader.dataset)
-        device = update_compute(model) 
+        
     except Exception as e:
         actionTracker.update_status('MDL_TRN_DTL', 'ERROR', 'Error in loading training dataset')
         log_error(__file__, 'main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
         print(f"Error updating status to MDL_TRN_DTL: {str(e)}")
         sys.exit(1)
+        
+    try: 
+        model = initialize_model(actionTracker.model_config, train_loader.dataset)
+        device = update_compute(model)
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded') 
+    except Exception as e:
+        actionTracker.update_status('MDL_TRN_MDL', 'ERROR', 'Error in loading model')
+        log_error(__file__, 'main', f'Error updating status to MDL_TRN_MDL: {str(e)}')
+        print(f"Error updating status to MDL_TRN_MDL: {str(e)}")
+        sys.exit(1)
+            
 
     try:
         criterion = nn.CrossEntropyLoss().to(device)
         optimizer = setup_optimizer(model, actionTracker.model_config)
         scheduler = setup_scheduler(optimizer, actionTracker.model_config)
         actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
+        
     except Exception as e:
         actionTracker.update_status('MDL_TRN_SETUP', 'ERROR', 'Error in setting up model training')
         log_error(__file__, 'main', f'Error updating status to MDL_TRN_STRT: {str(e)}')
