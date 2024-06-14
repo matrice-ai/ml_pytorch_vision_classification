@@ -8,6 +8,8 @@ from export_formats.torchscript.predict import load_model as load_torchscript, p
 from export_formats.onnx.predict import load_model as load_onnx, predict as predict_onnx
 from predict import load_model as load_pytorch, predict as predict_pytorch
 
+
+
 def load_model(actionTracker):
     runtime_framework=actionTracker.action_details['runtimeFramework'].lower()
     try:
@@ -57,17 +59,26 @@ def predict(model_data,image_bytes):
         sys.exit(1)
     return predictions
 
+
 def main(action_id, port):
-    actionTracker = ActionTracker(action_id)
+    #Getting the actionTracker
+    try:
+        actionTracker = ActionTracker(action_id)
+    except Exception as e:
+        log_error(__file__, 'ML_YOLOV8/main', f'Error initializing ActionTracker: {str(e)}')
+        print(f"Error initializing ActionTracker: {str(e)}")
+        sys.exit(1)
+
+    #Deploying the model
+    
     try:
         x = MatriceDeploy(session, load_model, predict, action_id, port)
         x.start_server()
-        actionTracker.update_status('xyz', 'OK', 'Model Deployment has been acknowledged')
+        actionTracker.update_status('MDL_DPY_ACK', 'OK', 'Model Deployment has been acknowledged')
     except Exception as e:
-        actionTracker.update_status('MDL_DPY_ACK', 'ERROR', 'Error in model deployment : ' + str(e))
+        actionTracker.update_status('MDL_DPY_ERR', 'ERROR', 'Error in model deployment : ' + str(e))
         sys.exit(1)
         return
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
