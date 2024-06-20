@@ -74,6 +74,9 @@ from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_im
                            check_yaml, colorstr, file_size, get_default_args, print_args, url2file, yaml_save)
 from export_utils.utils.torch_utils import select_device, smart_inference_mode
 
+from matrice_sdk.src.actionTracker import ActionTracker
+from matrice_sdk.src.matrice import Session
+
 MACOS = platform.system() == 'Darwin'  # macOS environment
 
 
@@ -115,7 +118,7 @@ def export_formats():
 
 
 def try_export(inner_func):
-    # YOLOv5 export decorator, i..e @try_export
+    # YOLOv5 export decorator, i.e., @try_export
     inner_args = get_default_args(inner_func)
 
     def outer_func(*args, **kwargs):
@@ -123,10 +126,11 @@ def try_export(inner_func):
         try:
             with Profile() as dt:
                 f, model = inner_func(*args, **kwargs)
-            LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
+            #LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
+            actionTracker.update_status('MDL_EXPT', 'OK', 'Model export is successful')
             return f, model
         except Exception as e:
-            LOGGER.info(f'{prefix} export failure ❌ {dt.t:.1f}s: {e}')
+            actionTracker.update_status('MDL_EXPT', 'ERROR', 'Error in export : ' + str(e))
             return None, None
 
     return outer_func
@@ -135,16 +139,19 @@ def try_export(inner_func):
 @try_export
 def export_torchscript(model, im, file, optimize, prefix=colorstr('TorchScript:')):
     # YOLOv5 TorchScript model export
-    LOGGER.info(f'\n{prefix} starting export with torch {torch.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with torch {torch.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TorchScript model export has been acknowledged')
     f = file.with_suffix('.torchscript')
-
-    ts = torch.jit.trace(model, im, strict=False)
     d = {'shape': im.shape, 'stride': int(max(model.stride)), 'names': None}
     extra_files = {'config.txt': json.dumps(d)}  # torch._C.ExtraFilesMap()
-    if optimize:  # https://pytorch.org/tutorials/recipes/mobile_interpreter.html
-        optimize_for_mobile(ts)._save_for_lite_interpreter(str(f), _extra_files=extra_files)
-    else:
-        ts.save(str(f), _extra_files=extra_files)
+
+    try:
+        ts = torch.jit.trace(model, im, strict=False)
+        save_func = optimize_for_mobile(ts)._save_for_lite_interpreter if optimize else ts.save
+        save_func(str(f), _extra_files=extra_files)
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_ACK', 'ERROR', 'Error in TorchScript model export : ' + str(e))
+        return None, None
     return f, None
 
 
@@ -154,7 +161,8 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
     check_requirements('onnx>=1.12.0')
     import onnx
 
-    LOGGER.info(f'\n{prefix} starting export with onnx {onnx.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with onnx {onnx.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'ONNX Model Export has been acknowledged')
     f = str(file.with_suffix('.onnx'))
 
     output_names = ['output0', 'output1'] if isinstance(model, SegmentationModel) else ['output0']
@@ -166,7 +174,8 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
         elif isinstance(model, DetectionModel):
             dynamic['output0'] = {0: 'batch', 1: 'anchors'}  # shape(1,25200,85)
 
-    torch.onnx.export(
+    try:
+        torch.onnx.export(
         model.cpu() if dynamic else model,  # --dynamic only compatible with cpu
         im.cpu() if dynamic else im,
         f,
@@ -175,11 +184,18 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
         do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
         input_names=['images'],
         output_names=output_names,
-        dynamic_axes=dynamic or None)
-
-    # Checks
-    model_onnx = onnx.load(f)  # load onnx model
-    onnx.checker.check_model(model_onnx)  # check onnx model
+        dynamic_axes=dynamic or None
+        )
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting ONNX model : ' + str(e))
+        return 
+    
+    try:
+        model_onnx = onnx.load(f)
+        onnx.checker.check_model(model_onnx)
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_CHECK_FAIL', 'ERROR',  'ERROR in loading ONNX model : ' + str(e))
+        return 
 
     # Metadata
     d = {'stride': int(max(model.stride)), 'names': None}
@@ -195,12 +211,15 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
             check_requirements(('onnxruntime-gpu' if cuda else 'onnxruntime', 'onnx-simplifier>=0.4.1'))
             import onnxsim
 
-            LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
+            #LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
             model_onnx, check = onnxsim.simplify(model_onnx)
             assert check, 'assert check failed'
             onnx.save(model_onnx, f)
+            actionTracker.update_status('MDL_EXPT_SIMPLIFY', 'OK', 'Simplifying ONNX model')
         except Exception as e:
-            LOGGER.info(f'{prefix} simplifier failure: {e}')
+            #LOGGER.info(f'{prefix} simplifier failure: {e}')
+            actionTracker.update_status('MDL_EXPT_SIMPLIFY_FAIL', 'ERROR', 'ERROR in simplifying ONNX model : ' + str(e))
+            return
     return f, model_onnx
 
 
@@ -211,63 +230,68 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
     import openvino.runtime as ov  # noqa
     from openvino.tools import mo  # noqa
 
-    LOGGER.info(f'\n{prefix} starting export with openvino {ov.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with openvino {ov.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'OpenVINO Model Export has been acknowledged')
     f = str(file).replace(file.suffix, f'_openvino_model{os.sep}')
     f_onnx = file.with_suffix('.onnx')
     f_ov = str(Path(f) / file.with_suffix('.xml').name)
-    if int8:
-        check_requirements('nncf>=2.4.0')  # requires at least version 2.4.0 to use the post-training quantization
-        import nncf
-        import numpy as np
-        from openvino.runtime import Core
+    try:
+        if int8:
+            check_requirements('nncf>=2.4.0')  # requires at least version 2.4.0 to use the post-training quantization
+            import nncf
+            import numpy as np
+            from openvino.runtime import Core
 
-        from export_utils.utils.dataloaders import create_dataloader
-        core = Core()
-        onnx_model = core.read_model(f_onnx)  # export
+            from export_utils.utils.dataloaders import create_dataloader
+            core = Core()
+            onnx_model = core.read_model(f_onnx)  # export
 
-        def prepare_input_tensor(image: np.ndarray):
-            input_tensor = image.astype(np.float32)  # uint8 to fp16/32
-            input_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
+            def prepare_input_tensor(image: np.ndarray):
+                input_tensor = image.astype(np.float32)  # uint8 to fp16/32
+                input_tensor /= 255.0  # 0 - 255 to 0.0 - 1.0
 
-            if input_tensor.ndim == 3:
-                input_tensor = np.expand_dims(input_tensor, 0)
-            return input_tensor
+                if input_tensor.ndim == 3:
+                    input_tensor = np.expand_dims(input_tensor, 0)
+                return input_tensor
 
-        def gen_dataloader(yaml_path, task='train', imgsz=640, workers=4):
-            data_yaml = check_yaml(yaml_path)
-            data = check_dataset(data_yaml)
-            dataloader = create_dataloader(data[task],
-                                           imgsz=imgsz,
-                                           batch_size=1,
-                                           stride=32,
-                                           pad=0.5,
-                                           single_cls=False,
-                                           rect=False,
-                                           workers=workers)[0]
-            return dataloader
+            def gen_dataloader(yaml_path, task='train', imgsz=640, workers=4):
+                data_yaml = check_yaml(yaml_path)
+                data = check_dataset(data_yaml)
+                dataloader = create_dataloader(data[task],
+                                            imgsz=imgsz,
+                                            batch_size=1,
+                                            stride=32,
+                                            pad=0.5,
+                                            single_cls=False,
+                                            rect=False,
+                                            workers=workers)[0]
+                return dataloader
 
-        # noqa: F811
+            # noqa: F811
 
-        def transform_fn(data_item):
-            """
-            Quantization transform function. Extracts and preprocess input data from dataloader item for quantization.
-            Parameters:
-               data_item: Tuple with data item produced by DataLoader during iteration
-            Returns:
-                input_tensor: Input data for quantization
-            """
-            img = data_item[0].numpy()
-            input_tensor = prepare_input_tensor(img)
-            return input_tensor
+            def transform_fn(data_item):
+                """
+                Quantization transform function. Extracts and preprocess input data from dataloader item for quantization.
+                Parameters:
+                data_item: Tuple with data item produced by DataLoader during iteration
+                Returns:
+                    input_tensor: Input data for quantization
+                """
+                img = data_item[0].numpy()
+                input_tensor = prepare_input_tensor(img)
+                return input_tensor
 
-        ds = gen_dataloader(data)
-        quantization_dataset = nncf.Dataset(ds, transform_fn)
-        ov_model = nncf.quantize(onnx_model, quantization_dataset, preset=nncf.QuantizationPreset.MIXED)
-    else:
-        ov_model = mo.convert_model(f_onnx, model_name=file.stem, framework='onnx', compress_to_fp16=half)  # export
+            ds = gen_dataloader(data)
+            quantization_dataset = nncf.Dataset(ds, transform_fn)
+            ov_model = nncf.quantize(onnx_model, quantization_dataset, preset=nncf.QuantizationPreset.MIXED)
+        else:
+            ov_model = mo.convert_model(f_onnx, model_name=file.stem, framework='onnx', compress_to_fp16=half)  # export
 
-    ov.serialize(ov_model, f_ov)  # save
-    yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+        ov.serialize(ov_model, f_ov)  # save
+        yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting OpenVINO model :' + str(e))
+        return
     return f, None
 
 
@@ -278,11 +302,16 @@ def export_paddle(model, im, file, metadata, prefix=colorstr('PaddlePaddle:')):
     import x2paddle
     from x2paddle.convert import pytorch2paddle
 
-    LOGGER.info(f'\n{prefix} starting export with X2Paddle {x2paddle.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with X2Paddle {x2paddle.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'OpenVINO Model Export has been acknowledged')
     f = str(file).replace('.pt', f'_paddle_model{os.sep}')
-
-    pytorch2paddle(module=model, save_dir=f, jit_type='trace', input_examples=[im])  # export
-    yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+    
+    try:
+        pytorch2paddle(module=model, save_dir=f, jit_type='trace', input_examples=[im])  # export
+        yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting PaddlePaddle model :' + str(e))
+        return 
     return f, None
 
 
@@ -292,22 +321,27 @@ def export_coreml(model, im, file, int8, half, nms, prefix=colorstr('CoreML:')):
     check_requirements('coremltools')
     import coremltools as ct
 
-    LOGGER.info(f'\n{prefix} starting export with coremltools {ct.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with coremltools {ct.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'CoreML Model Export has been acknowledged')
     f = file.with_suffix('.mlpackage')
 
-    if nms:
-        model = iOSModel(model, im)
-    ts = torch.jit.trace(model, im, strict=False)  # TorchScript model
-    ct_model = ct.convert(ts, inputs=[ct.ImageType('image', shape=im.shape, scale=1 / 255, bias=[0, 0, 0])])
-    bits, mode = (8, 'kmeans_lut') if int8 else (16, 'linear') if half else (32, None)
-    if bits < 32:
-        if MACOS:  # quantization only supported on macOS
-            with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', category=DeprecationWarning)  # suppress numpy==1.20 float warning
-                ct_model = ct.models.neural_network.quantization_utils.quantize_weights(ct_model, bits, mode)
-        else:
-            print(f'{prefix} quantization only supported on macOS, skipping...')
-    ct_model.save(f)
+    try:
+        if nms:
+            model = iOSModel(model, im)
+        ts = torch.jit.trace(model, im, strict=False)  # TorchScript model
+        ct_model = ct.convert(ts, inputs=[ct.ImageType('image', shape=im.shape, scale=1 / 255, bias=[0, 0, 0])])
+        bits, mode = (8, 'kmeans_lut') if int8 else (16, 'linear') if half else (32, None)
+        if bits < 32:
+            if MACOS:  # quantization only supported on macOS
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', category=DeprecationWarning)  # suppress numpy==1.20 float warning
+                    ct_model = ct.models.neural_network.quantization_utils.quantize_weights(ct_model, bits, mode)
+            else:
+                print(f'{prefix} quantization only supported on macOS, skipping...')
+        ct_model.save(f)
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting CoreML model :' + str(e))
+        return 
     return f, ct_model
 
 
@@ -322,22 +356,25 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
             check_requirements('nvidia-tensorrt', cmds='-U --index-url https://pypi.ngc.nvidia.com')
         import tensorrt as trt
 
-    if trt.__version__[0] == '7':  # TensorRT 7 handling https://github.com/ultralytics/yolov5/issues/6012
-        grid = model.model[-1].anchor_grid
-        model.model[-1].anchor_grid = [a[..., :1, :1, :] for a in grid]
-        export_onnx(model, im, file, 12, dynamic, simplify)  # opset 12
-        model.model[-1].anchor_grid = grid
-    else:  # TensorRT >= 8
-        check_version(trt.__version__, '8.0.0', hard=True)  # require tensorrt>=8.0.0
-        export_onnx(model, im, file, 12, dynamic, simplify)  # opset 12
-    onnx = file.with_suffix('.onnx')
+    try:
+        if trt.__version__[0] == '7':  # TensorRT 7 handling https://github.com/ultralytics/yolov5/issues/6012
+            grid = model.model[-1].anchor_grid
+            model.model[-1].anchor_grid = [a[..., :1, :1, :] for a in grid]
+            export_onnx(model, im, file, 12, dynamic, simplify)  # opset 12
+            model.model[-1].anchor_grid = grid
+        else:  # TensorRT >= 8
+            check_version(trt.__version__, '8.0.0', hard=True)  # require tensorrt>=8.0.0
+            export_onnx(model, im, file, 12, dynamic, simplify)  # opset 12
+        onnx = file.with_suffix('.onnx')
 
-    LOGGER.info(f'\n{prefix} starting export with TensorRT {trt.__version__}...')
-    assert onnx.exists(), f'failed to export ONNX file: {onnx}'
+        assert onnx.exists(), f'failed to export ONNX file: {onnx}'
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting to ONNX model :' + str(e))
+
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorRT Model Export has been acknowledged')
     f = file.with_suffix('.engine')  # TensorRT engine file
     logger = trt.Logger(trt.Logger.INFO)
-    if verbose:
-        logger.min_severity = trt.Logger.Severity.VERBOSE
+    logger.min_severity = trt.Logger.Severity.VERBOSE if verbose else trt.Logger.INFO
 
     builder = trt.Builder(logger)
     config = builder.create_builder_config()
@@ -347,31 +384,34 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
     flag = (1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
     network = builder.create_network(flag)
     parser = trt.OnnxParser(network, logger)
-    if not parser.parse_from_file(str(onnx)):
-        raise RuntimeError(f'failed to load ONNX file: {onnx}')
+    try:
+        if not parser.parse_from_file(str(onnx)):
+            raise RuntimeError(f'failed to load ONNX file: {onnx}')
 
-    inputs = [network.get_input(i) for i in range(network.num_inputs)]
-    outputs = [network.get_output(i) for i in range(network.num_outputs)]
-    for inp in inputs:
-        LOGGER.info(f'{prefix} input "{inp.name}" with shape{inp.shape} {inp.dtype}')
-    for out in outputs:
-        LOGGER.info(f'{prefix} output "{out.name}" with shape{out.shape} {out.dtype}')
+        inputs = [network.get_input(i) for i in range(network.num_inputs)]
+        outputs = [network.get_output(i) for i in range(network.num_outputs)]
+        #for inp in inputs:
+        #    LOGGER.info(f'{prefix} input "{inp.name}" with shape{inp.shape} {inp.dtype}')
+        #for out in outputs:
+        #    LOGGER.info(f'{prefix} output "{out.name}" with shape{out.shape} {out.dtype}')
 
-    if dynamic:
-        if im.shape[0] <= 1:
-            LOGGER.warning(f'{prefix} WARNING ⚠️ --dynamic model requires maximum --batch-size argument')
-        profile = builder.create_optimization_profile()
-        for inp in inputs:
-            profile.set_shape(inp.name, (1, *im.shape[1:]), (max(1, im.shape[0] // 2), *im.shape[1:]), im.shape)
-        config.add_optimization_profile(profile)
+        if dynamic:
+            if im.shape[0] <= 1:
+                LOGGER.warning(f'{prefix} WARNING ⚠️ --dynamic model requires maximum --batch-size argument')
+            profile = builder.create_optimization_profile()
+            for inp in inputs:
+                profile.set_shape(inp.name, (1, *im.shape[1:]), (max(1, im.shape[0] // 2), *im.shape[1:]), im.shape)
+            config.add_optimization_profile(profile)
 
-    LOGGER.info(f'{prefix} building FP{16 if builder.platform_has_fast_fp16 and half else 32} engine as {f}')
-    if builder.platform_has_fast_fp16 and half:
-        config.set_flag(trt.BuilderFlag.FP16)
-    with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
-        t.write(engine.serialize())
+        LOGGER.info(f'{prefix} building FP{16 if builder.platform_has_fast_fp16 and half else 32} engine as {f}')
+        if builder.platform_has_fast_fp16 and half:
+            config.set_flag(trt.BuilderFlag.FP16)
+        with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
+            t.write(engine.serialize())
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine + ' str(e))
+        return 
     return f, None
-
 
 @try_export
 def export_saved_model(model,
@@ -396,32 +436,38 @@ def export_saved_model(model,
 
     from export_utils.models.tf import TFModel
 
-    LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Saved Model Export has been acknowledged')
     f = str(file).replace('.pt', '_saved_model')
     batch_size, ch, *imgsz = list(im.shape)  # BCHW
 
-    tf_model = TFModel(cfg=model.yaml, model=model, nc=model.nc, imgsz=imgsz)
-    im = tf.zeros((batch_size, *imgsz, ch))  # BHWC order for TensorFlow
-    _ = tf_model.predict(im, tf_nms, agnostic_nms, topk_per_class, topk_all, iou_thres, conf_thres)
-    inputs = tf.keras.Input(shape=(*imgsz, ch), batch_size=None if dynamic else batch_size)
-    outputs = tf_model.predict(inputs, tf_nms, agnostic_nms, topk_per_class, topk_all, iou_thres, conf_thres)
-    keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
-    keras_model.trainable = False
-    keras_model.summary()
-    if keras:
-        keras_model.save(f, save_format='tf')
-    else:
-        spec = tf.TensorSpec(keras_model.inputs[0].shape, keras_model.inputs[0].dtype)
-        m = tf.function(lambda x: keras_model(x))  # full model
-        m = m.get_concrete_function(spec)
-        frozen_func = convert_variables_to_constants_v2(m)
-        tfm = tf.Module()
-        tfm.__call__ = tf.function(lambda x: frozen_func(x)[:4] if tf_nms else frozen_func(x), [spec])
-        tfm.__call__(im)
-        tf.saved_model.save(tfm,
-                            f,
-                            options=tf.saved_model.SaveOptions(experimental_custom_gradients=False) if check_version(
-                                tf.__version__, '2.6') else tf.saved_model.SaveOptions())
+    try:
+        tf_model = TFModel(cfg=model.yaml, model=model, nc=model.nc, imgsz=imgsz)
+        im = tf.zeros((batch_size, *imgsz, ch))  # BHWC order for TensorFlow
+        _ = tf_model.predict(im, tf_nms, agnostic_nms, topk_per_class, topk_all, iou_thres, conf_thres)
+        inputs = tf.keras.Input(shape=(*imgsz, ch), batch_size=None if dynamic else batch_size)
+        outputs = tf_model.predict(inputs, tf_nms, agnostic_nms, topk_per_class, topk_all, iou_thres, conf_thres)
+        keras_model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        keras_model.trainable = False
+        keras_model.summary()
+        if keras:
+            keras_model.save(f, save_format='tf')
+        else:
+            spec = tf.TensorSpec(keras_model.inputs[0].shape, keras_model.inputs[0].dtype)
+            m = tf.function(lambda x: keras_model(x))  # full model
+            m = m.get_concrete_function(spec)
+            frozen_func = convert_variables_to_constants_v2(m)
+            tfm = tf.Module()
+            tfm.__call__ = tf.function(lambda x: frozen_func(x)[:4] if tf_nms else frozen_func(x), [spec])
+            tfm.__call__(im)
+            tf.saved_model.save(tfm,
+                                f,
+                                options=tf.saved_model.SaveOptions(experimental_custom_gradients=False) if check_version(
+                                    tf.__version__, '2.6') else tf.saved_model.SaveOptions())
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Saved Model : " + str(e))
+        return
+
     return f, keras_model
 
 
@@ -431,14 +477,19 @@ def export_pb(keras_model, file, prefix=colorstr('TensorFlow GraphDef:')):
     import tensorflow as tf
     from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-    LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Graphdef Export has been acknowledged')
     f = file.with_suffix('.pb')
 
-    m = tf.function(lambda x: keras_model(x))  # full model
-    m = m.get_concrete_function(tf.TensorSpec(keras_model.inputs[0].shape, keras_model.inputs[0].dtype))
-    frozen_func = convert_variables_to_constants_v2(m)
-    frozen_func.graph.as_graph_def()
-    tf.io.write_graph(graph_or_graph_def=frozen_func.graph, logdir=str(f.parent), name=f.name, as_text=False)
+    try:
+        m = tf.function(lambda x: keras_model(x))  # full model
+        m = m.get_concrete_function(tf.TensorSpec(keras_model.inputs[0].shape, keras_model.inputs[0].dtype))
+        frozen_func = convert_variables_to_constants_v2(m)
+        frozen_func.graph.as_graph_def()
+        tf.io.write_graph(graph_or_graph_def=frozen_func.graph, logdir=str(f.parent), name=f.name, as_text=False)
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow GraphDef : " + str(e))
+        return
     return f, None
 
 
@@ -447,7 +498,8 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
     # YOLOv5 TensorFlow Lite export
     import tensorflow as tf
 
-    LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+    #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Graphdef Export has been acknowledged')
     batch_size, ch, *imgsz = list(im.shape)  # BCHW
     f = str(file).replace('.pt', '-fp16.tflite')
 
@@ -468,8 +520,12 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
     if nms or agnostic_nms:
         converter.target_spec.supported_ops.append(tf.lite.OpsSet.SELECT_TF_OPS)
 
-    tflite_model = converter.convert()
-    open(f, 'wb').write(tflite_model)
+    try:
+        tflite_model = converter.convert()
+        open(f, 'wb').write(tflite_model)
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Lite : " + str(e))
+        return
     return f, None
 
 
