@@ -1,0 +1,27 @@
+{
+    "modelKey": "wide_resnet50_2",
+    "modelName": "Wide ResNet50-2",
+    "_idModelFamily": "",
+    "paramsMillions": 68.9,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 78.468
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 94.086
+        }
+    ],
+    "runtimeResults": []
+}

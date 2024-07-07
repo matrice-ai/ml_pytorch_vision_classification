@@ -21,10 +21,10 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
-from python_common.services.utils import log_error
+from  matrice_sdk import rpc
+from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
+import traceback
 
-
-from matrice_sdk.actionTracker import ActionTracker
 
 
 model_names = sorted(name for name in models.__dict__
@@ -32,60 +32,24 @@ model_names = sorted(name for name in models.__dict__
     and callable(models.__dict__[name]))
 
 
-# Just For testing it will be removed 
-def update_with_defaults(model_config):
-    default_values = {
-        'arch': 'resnet18',
-        'workers': 4,
-        'epochs': 2,
-        'patience': 5,
-        'min_delta': 0.5,
-        'opt': 'sgd',
-        'lr_scheduler': 'steplr',
-        'lr_step_size': 30,
-        'lr_gamma': 0.1,
-        'lr_min': 0.0,
-        'start_epoch': 0,
-        'batch_size': 32,
-        'lr': 0.1,
-        'momentum': 0.9,
-        'weight_decay': 1e-4,
-        'print_freq': 10,
-        'resume': '',
-        'evaluate': False,
-        'pretrained': True,
-        'world_size': -1,
-        'rank': -1,
-        'dist_url': 'tcp://224.66.41.62:23456',
-        'dist_backend': 'nccl',
-        'seed': None,
-        'gpu': None,
-        'multiprocessing_distributed': False,
-        'dummy': False,
-    }
-    
-    for key, value in default_values.items():
-        if model_config.get(key,None) == None:
-            model_config[key]= value
-
-        if type(default_values[key]) != type(model_config[key]):
-            model_config[key]=type(default_values[key])(model_config[key])
-            
-    return model_config
-
 best_acc1 = 0
 
 
-def main(action_id):
-    
+def main(action_id=None):
     global best_acc1
     global actionTracker
-     
-    # Initializing ActionTracker 
+    
     try:
-        actionTracker = ActionTracker(action_id)
+        if action_id:
+            actionTracker = ActionTracker(action_id)
+        else:
+            action_type = input("Enter the action type : Train/Export : ")
+            model_name = input("Enter the name of model family : ")
+            model_arch = input("Enter the model Architecture , enter existing architecture only! : ")
+            output_type = input("Enter the type of output - detection / classification : ")
+            actionTracker = LocalActionTracker(action_type , model_name , model_arch , output_type)
     except Exception as e:
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
     
@@ -94,62 +58,64 @@ def main(action_id):
         actionTracker.update_status('MDL_TRN_ACK', 'OK', 'Model Training has acknowledged')
     except Exception as e:
         actionTracker.update_status('MDL_TRN_ERR', 'ERROR', f'Error in starting training: {str(e)}')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_ACK: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_ACK: {str(e)}')
         print(f"Error updating status to MDL_TRN_ACK: {str(e)}")
         sys.exit(1)
     
 
-    update_with_defaults(actionTracker.model_config) # Just For testing it will be removed
-    print('model_config is', actionTracker.model_config)
+    model_config = actionTracker.get_job_params()
+    print('model_config is', model_config)
 
     # Loading the data
     try:
-        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
-        train_loader, val_loader, test_loader = actionTracker.load_data(actionTracker.model_config)
+        model_config.data = f"workspace/{model_config['dataset_path']}/images"
+        train_loader, val_loader, test_loader = load_data(model_config)
         index_to_labels = {str(idx): str(label) for idx, label in enumerate(train_loader.dataset.classes)}
         actionTracker.add_index_to_category(index_to_labels)
-        actionTracker.udpate_status('MDL_TRN_DTL', 'OK', 'Training dataset is loaded')
+        actionTracker.update_status('MDL_TRN_DTL', 'OK', 'Training dataset is loaded')
         
     except Exception as e:
         actionTracker.update_status('MDL_TRN_DTL', 'ERROR', 'Error in loading training dataset')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_DTL: {str(e)}')
         print(f"Error updating status to MDL_TRN_DTL: {str(e)}")
         sys.exit(1)
     
     # Initializing model    
     try: 
-        model = initialize_model(actionTracker.model_config, train_loader.dataset)
+        model = initialize_model(model_config, train_loader.dataset)
         device = update_compute(model)
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded') 
     except Exception as e:
         actionTracker.update_status('MDL_TRN_MDL', 'ERROR', 'Error in loading model')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_MDL: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_MDL: {str(e)}')
         print(f"Error updating status to MDL_TRN_MDL: {str(e)}")
         sys.exit(1)
             
     # Setting up the training of the model
     try:
         criterion = nn.CrossEntropyLoss().to(device)
-        optimizer = setup_optimizer(model, actionTracker.model_config)
-        scheduler = setup_scheduler(optimizer, actionTracker.model_config)
+        optimizer = setup_optimizer(model, model_config)
+        scheduler = setup_scheduler(optimizer, model_config)
         actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
         
     except Exception as e:
         actionTracker.update_status('MDL_TRN_SETUP', 'ERROR', 'Error in setting up model training')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_STRT: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_STRT: {str(e)}')
         print(f"Error updating status to MDL_TRN_STRT: {str(e)}")
         sys.exit(1)
-
+        
+    
+    best_acc1 = -1.0
     best_model = None
-    early_stopping=EarlyStopping(patience=actionTracker.model_config.patience,min_delta=actionTracker.model_config.min_delta)
+    early_stopping=EarlyStopping(patience=model_config.patience,min_delta=model_config.min_delta)
 
-    for epoch in range(actionTracker.model_config.epochs):
+    for epoch in range(model_config.epochs):
 
         # train for one epoch
-        loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, actionTracker.model_config)
+        loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
 
         # evaluate on validation set
-        loss_val,acc1_val,acc5_val= validate(val_loader, model, criterion,device, actionTracker.model_config)
+        loss_val,acc1_val,acc5_val= validate(val_loader, model, criterion,device, model_config)
 
         scheduler.step()
 
@@ -170,7 +136,7 @@ def main(action_id):
             
         except Exception as e:
             actionTracker.update_status('MDL_TRN_EPOCH', 'ERROR', 'Error in logging training epoch details')
-            log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EPOCH: {str(e)}')
+            actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EPOCH: {str(e)}')
             print(f"Error updating status to MDL_TRN_EPOCH: {str(e)}")
             sys.exit(1) 
         
@@ -178,7 +144,7 @@ def main(action_id):
             best_model = model
             save_checkpoint({
                 'epoch': epoch,
-                'arch': actionTracker.model_config.arch,
+                'arch': model_config.arch,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
@@ -220,7 +186,7 @@ def main(action_id):
     
     except Exception as e:
         actionTracker.udpate_status('MDL_TRN_EVAL', 'ERROR', 'Error in evaluation using the best model')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EVAL: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EVAL: {str(e)}')
         print(f"Error updating status to MDL_TRN_EVAL: {str(e)}")
         sys.exit(1) 
             
@@ -321,12 +287,14 @@ def validate(val_loader, model, criterion, device, model_config):
 
 
 def load_data(model_config):
+    
+    print("entered")
     global traindir, valdir, testdir
     traindir = os.path.join(model_config.data, 'train')
     valdir = os.path.join(model_config.data, 'val')
     testdir = os.path.join(model_config.data, 'test')
     
-    
+    print("entered")
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                         std=[0.229, 0.224, 0.225])
 
@@ -347,15 +315,19 @@ def load_data(model_config):
             transforms.ToTensor(),
             normalize,
         ]))
-
+    
+    print("entered")
+    
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=model_config.batch_size, shuffle=False,
-        num_workers=model_config.workers, pin_memory=True)
-
+        num_workers=4)
+    
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=model_config.batch_size, shuffle=False,
-        num_workers=model_config.workers, pin_memory=True)
-
+        num_workers=4)
+    
+    print("entered")
+    
     test_loader = None
     if os.path.exists(testdir):
         test_dataset = datasets.ImageFolder(
@@ -369,30 +341,50 @@ def load_data(model_config):
         
         test_loader = torch.utils.data.DataLoader(
             test_dataset, batch_size=model_config.batch_size, shuffle=False,
-            num_workers=model_config.workers, pin_memory=True)
+            num_workers=4, pin_memory=True)
 
     return train_loader, val_loader, test_loader
 
 
-def initialize_model(model_config, train_dataset):
+def initialize_model(model_config, dataset):
     print("=> using pre-trained model '{}'".format(model_config.arch))
+    
+    # Get the model function or class
+    model_func = models.__dict__[model_config.arch]
+    
+    # Check if it's a callable (function or class)
+    if callable(model_func):
+        model = model_func(pretrained=model_config.pretrained)
+    else:
+        # If it's a module, we need to get the generating function
+        model = getattr(model_func, model_config.arch)(pretrained=model_config.pretrained)
+    
     try:
-        checkpoint_path, pretrained = actionTracker.checkpoint_path , actionTracker.pretrained
-        model = models.__dict__[model_config.model_key](pretrained=pretrained)
-        
-        # Load the model from the checkpoint path if provided
-        if checkpoint_path:
-            checkpoint = torch.load(checkpoint_path)  
+        # Load checkpoint if available
+        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path()
+        if checkpoint_found:
+            print("Loading checkpoint from:", checkpoint_path)
+            checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(checkpoint['state_dict'])
             print("Model loaded from checkpoint:", checkpoint_path)
+        else:
+            print("No checkpoint found. Using pre-trained or newly initialized weights.")
 
-        num_classes = len(train_dataset.classes)
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
+        # Modify the final layer
+        if hasattr(model, 'fc'):
+            num_ftrs = model.fc.in_features
+            model.fc = nn.Linear(num_ftrs, len(dataset.classes))
+        elif hasattr(model, 'classifier'):
+            num_ftrs = model.classifier[-1].in_features
+            model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+        else:
+            raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
+
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
         
-    except:
-        actionTracker.update_status('MDL_TRN_MDL', 'ERROR', 'Error in loading model')
-        
+    except Exception as e:
+        print(f"Error in loading model: {str(e)}")
+        actionTracker.update_status('MDL_TRN_MDL', 'ERROR', f'Error in loading model: {str(e)}')
     
     return model
 
@@ -449,15 +441,37 @@ def update_compute(model):
     
     return device
 
-def save_checkpoint(state, model,is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+
+import shutil
+import copy
+
+def save_checkpoint(state, model, is_best, filename='checkpoint.pth.tar'):
+    # Create checkpoints directory if it doesn't exist
+    checkpoint_dir = 'checkpoints'
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    
+    # Full path for the checkpoint file
+    filepath = os.path.join(checkpoint_dir, filename)
+    
+    # Save the checkpoint
+    torch.save(state, filepath)
+    print(f"Checkpoint saved to {filepath}")
+
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        # Copy the best model
+        best_filepath = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        shutil.copyfile(filepath, best_filepath)
+        print(f"Best model saved to {best_filepath}")
+
+        # Save the best model in .pt format
         if isinstance(model, torch.nn.DataParallel):
-            model_best=copy.deepcopy(model.module)
+            model_best = copy.deepcopy(model.module)
         else:
-            model_best=model
-        torch.save(model_best,'model_best.pt')
+            model_best = model
+        best_pt_filepath = os.path.join(checkpoint_dir, 'model_best.pt')
+        torch.save(model_best, best_pt_filepath)
+        print(f"Best model (PT format) saved to {best_pt_filepath}")
 
 class EarlyStopping:
     def __init__(self, patience=5,min_delta=10):
@@ -512,9 +526,8 @@ def accuracy(output, target, topk=(1,)):
 
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 train.py <action_status_id>")
-        sys.exit(1)
-    action_status_id = sys.argv[1]
-    main(action_status_id)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+    parser.add_argument('action_id', nargs='?', default=None, metavar='ACTION_ID', help='Action ID')
+    args = parser.parse_args()
+    main(args.action_id)

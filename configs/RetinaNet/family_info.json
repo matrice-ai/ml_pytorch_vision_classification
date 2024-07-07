@@ -1,0 +1,46 @@
+{
+    "modelFamily": "RetinaNet",
+    "modelInputs": "image",
+    "modelOutputs": "Detection",
+    "models": [
+        {
+            "modelKey": "retinanet-resnet50-fpn-v2",
+            "modelName": "RetinaNet/Resnet50-FPN-v2"
+        },
+        {
+            "modelKey": "retinanet-resnet50-fpn",
+            "modelName": "RetinaNet/Resnet50-FPN"
+        }
+        ],
+    "description": "RetinaNet is a single-stage object detection model that addresses the class imbalance problem during training using a novel Focal Loss function",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO",
+        "TensorRT"
+    ],
+    "benchmarkDatasets": [
+        "COCO"
+    ],
+   "supportedMetrics": [
+        "mAP@50",
+        "mAP@75",
+        "mAP"
+    ],
+    "pruningSupport": true,
+    "codeRepository": "https://github.com/facebookresearch/Detectron.",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "ImageNet",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/pdf/1708.02002"
+    ],
+    "isPrivate": false
+}

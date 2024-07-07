@@ -1,0 +1,38 @@
+{
+    "modelKey": "resnet101",
+    "modelName": "ResNet-101",
+    "paramsMillions": 42.8,
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO",
+        "TensorRT"
+    ],
+    "recommendedRuntime": [
+        "ONNX",
+        "TensorRT"
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 77.37
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 5.314,
+            "throughput": 0,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "V100",
+            "numGPU": 1
+        }
+    ]
+}

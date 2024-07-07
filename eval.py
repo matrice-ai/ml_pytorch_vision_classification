@@ -20,7 +20,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
-from python_common.services.utils import log_error
+
 
 
 
@@ -35,7 +35,7 @@ def main(action_id):
     try:
         actionTracker = ActionTracker(action_id)
     except Exception as e:
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
     
@@ -44,7 +44,7 @@ def main(action_id):
         actionTracker.update_status('MDL_EVL_ACK', 'OK', 'Model Evaluation has acknowledged')
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in starting evaluation: {str(e)}')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_ACK: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_ACK: {str(e)}')
         print(f"Error updating status to MDL_EVL_ACK: {str(e)}")
         sys.exit(1)
     
@@ -56,7 +56,7 @@ def main(action_id):
         
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in loading dataset: {str(e)}')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_DTL: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_DTL: {str(e)}')
         print(f"Error updating status to MDL_EVL_DTL: {str(e)}")
         sys.exit(1)
     
@@ -73,7 +73,7 @@ def main(action_id):
         
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in starting Evaluation: {str(e)}')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_STRT: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_STRT: {str(e)}')
         print(f"Error updating status to MDL_EVL_STRT: {str(e)}")
         sys.exit(1)
 
@@ -94,7 +94,7 @@ def main(action_id):
         
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in completing Evaluation: {str(e)}')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_CMPL: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_EVL_CMPL: {str(e)}')
         print(f"Error updating status to MDL_EVL_CMPL: {str(e)}")
         sys.exit(1)    
 

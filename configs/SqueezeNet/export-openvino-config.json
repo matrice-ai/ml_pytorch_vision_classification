@@ -1,0 +1,56 @@
+{
+    "_idModelFamily": "",
+    "actionType": "export_model",
+    "exportFormat": "OpenVINO",
+    "actionConfig": [
+        {
+            "keyName": "int8",
+            "valueType": "bool",
+            "defaultValue": "False",
+            "predefinedValues": [
+                "True",
+                "False"
+            ],
+            "anyValue": false,
+            "hyperparameter": true,
+            "minValue": 0,
+            "maxValue": 0,
+            "modelKeys": [
+                "all"
+            ]
+        },
+        {
+            "keyName": "nms",
+            "valueType": "bool",
+            "defaultValue": "False",
+            "predefinedValues": [
+                "True",
+                "False"
+            ],
+            "anyValue": false,
+            "hyperparameter": true,
+            "minValue": 0,
+            "maxValue": 0,
+            "modelKeys": [
+                "all"
+            ]
+        }
+    ],
+    "dockerImage": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
+    "isPrivateDocker": false,
+    "dockerInformation": {
+        "accessKey": "",
+        "secretKey": "",
+        "region": ""
+    },
+    "dockerContainerForAction": {
+        "dockerContainer": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
+        "isGpuRequired": false,
+        "cpuType": ""
+    },
+    "dockerContainerForEvaluation": {
+        "dockerContainer": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
+        "isGpuRequired": false,
+        "cpuType": ""
+    }
+}
