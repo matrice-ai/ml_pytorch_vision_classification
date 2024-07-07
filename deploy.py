@@ -57,21 +57,29 @@ def predict(model_data,image_bytes):
         sys.exit(1)
     return predictions
 
-def main(action_id, port):
-    actionTracker = ActionTracker(action_id)
+
+def main(action_id):
+    #Getting the actionTracker
     try:
-        x = MatriceDeploy(session, load_model, predict, action_id, port)
-        x.start_server()
-        actionTracker.update_status('xyz', 'OK', 'Model Deployment has been acknowledged')
+        actionTracker = ActionTracker(action_id)
     except Exception as e:
-        actionTracker.update_status('MDL_DPY_ACK', 'ERROR', 'Error in model deployment : ' + str(e))
+        log_error(__file__, 'ML_YOLOV8/main', f'Error initializing ActionTracker: {str(e)}')
+        print(f"Error initializing ActionTracker: {str(e)}")
+        sys.exit(1)
+
+    #Deploying the model
+    
+    try:
+        x = actionTracker.Matrice_Deploy(load_model, predict, action_id)
+        x.start_server()
+        actionTracker.update_status('MDL_DPY_ACK', 'OK', 'Model Deployment has been acknowledged')
+    except Exception as e:
+        actionTracker.update_status('MDL_DPY_ERR', 'ERROR', 'Error in model deployment : ' + str(e))
         sys.exit(1)
         return
 
-
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python3 deploy.py <action_status_id> <port>")
+    if len(sys.argv) != 2:
+        print("Usage: python3 deploy.py <action_status_id>")
         sys.exit(1)
-
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1])
