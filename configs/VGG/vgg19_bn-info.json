@@ -1,0 +1,40 @@
+{
+    "modelKey": "vgg19_bn",
+    "modelName": "VGG19 with Batch Normalization",
+    "_idModelFamily": "",
+    "paramsMillions": 143.7,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 74.218
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 91.842
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 0.859,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "A100",
+            "numGPU": 1
+        }
+    ]
+}

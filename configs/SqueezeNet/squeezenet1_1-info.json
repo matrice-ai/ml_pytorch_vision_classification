@@ -1,0 +1,27 @@
+{
+    "modelKey": "squeezenet1_1",
+    "modelName": "SqueezeNet1.1",
+    "_idModelFamily": "",
+    "paramsMillions": 1.2,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 58.178
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 80.624
+        }
+    ],
+    "runtimeResults": []
+}

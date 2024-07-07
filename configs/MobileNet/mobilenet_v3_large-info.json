@@ -1,0 +1,40 @@
+{
+    "modelKey": "mobilenet_v3_large",
+    "modelName": "MobileNetV3 (Large)",
+    "_idModelFamily": "",
+    "paramsMillions": 5.5,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 74.042
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 91.34
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 44,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "V100",
+            "numGPU": 1
+        }
+    ]
+}

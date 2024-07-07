@@ -1,0 +1,10 @@
+Not all models info add just ViT-B/32
+{"modelKey": "RN50", "modelName": "RN50"},{"modelKey": "RN101", "modelName": "RN101"},
+{"modelKey": "RN50x4", "modelName": "RN50x4"},
+{"modelKey": "RN50x16", "modelName": "RN50x16"},
+{"modelKey": "RN50x64", "modelName": "RN50x64"},
+{"modelKey": "ViT-B/16", "modelName": "ViT-B/16"},
+{"modelKey": "ViT-L/14", "modelName": "ViT-L/14"},
+{"modelKey": "ViT-L/14@336px", "modelName": "ViT-L/14@336px"},
+
+Models preformance could be found in https://arxiv.org/pdf/2103.00020.pdf page 43 table.

@@ -1,0 +1,25 @@
+{
+    "modelFamily": "Faster R-CNN",
+    "modelInputs": "image",
+    "modelOutputs": "bounding boxes, class labels",
+    "models": [
+        {"modelKey": "FasterRCNN-ResNet50", "modelName": "Faster R-CNN - ResNet50"},
+        {"modelKey": "FasterRCNN-ResNet101", "modelName": "Faster R-CNN - ResNet101"},
+        {"modelKey": "FasterRCNN-VGG16", "modelName": "Faster R-CNN - VGG16"}
+    ],
+    "description": "Faster R-CNN is a state-of-the-art object detection model that improves upon previous R-CNN versions by integrating a Region Proposal Network (RPN) with Fast R-CNN. This allows for almost cost-free region proposals, enabling real-time object detection capabilities.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": ["PyTorch", "TensorFlow"],
+    "benchmarkDatasets": ["PASCAL VOC", "COCO"],
+    "supportedMetrics": ["mAP", "Recall"],
+    "pruningSupport": false,
+    "codeRepository": "https://github.com/rbgirshick/py-faster-rcnn",
+    "trainingDockerContainer": ["285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-object-detection:latest"],
+    "dataProcessing": {
+        "inputFormat": "image",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": ["https://arxiv.org/pdf/1506.01497"],
+    "isPrivate": false
+}

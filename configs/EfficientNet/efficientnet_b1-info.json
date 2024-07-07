@@ -1,0 +1,40 @@
+{
+    "modelKey": "efficientnet_b1",
+    "modelName": "EfficientNet B1",
+    "_idModelFamily": "",
+    "paramsMillions": 7.8,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 78.642
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 94.186
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 3.547,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "V100",
+            "numGPU": 1
+        }
+    ]
+}

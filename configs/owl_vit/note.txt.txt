@@ -1,0 +1,10 @@
+There is alos another large model.
+
+{"modelKey": "google/owlvit-large-patch14", "modelName": "google/owlvit-large-patch14"},
+
+Models preformance could be found in https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/23
+
+
+# Important
+
+Model Fmaily "supportedMetrics": ["AP@50", "AP@75", "AP@50:95"], are not supported in the other detection models in the platform, so we should disble them from the selection of the primary metrics of the expermint!

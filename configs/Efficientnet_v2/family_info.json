@@ -1,0 +1,53 @@
+{
+    "modelFamily": "EfficientNet V2",
+    "modelInputs": "image",
+    "modelOutputs": "classification",
+    "models": [
+        {
+            "modelKey": "efficientnet_v2_l",
+            "modelName": "EfficientNetV2 Large"
+        },
+        {
+            "modelKey": "efficientnet_v2_m",
+            "modelName": "EfficientNetV2 Medium"
+        },
+        {
+            "modelKey": "efficientnet_v2_s",
+            "modelName": "EfficientNetV2 Small"
+        }
+    ],
+    "description": "EfficientNetV2 is a family of convolutional neural networks, with variants\n                    including Large, Medium, and Small. These models are built upon a concept\n                    called \"compound scaling,\u201d addressing the trade-off between model size,\n                    accuracy, and computational efficiency. EfficientNetV2 is optimized for\n                    image classification tasks.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "benchmarkDatasets": [
+        "ImageNet"
+    ],
+    "supportedMetrics": [
+        "acc@1",
+        "acc@5",
+        "f1_score",
+        "recall",
+        "precision",
+        "specificity"
+    ],
+    "pruningSupport": false,
+    "codeRepository": "https://github.com/lukemelas/EfficientNet-PyTorch",
+    "trainingDockerContainer": [
+        "pytorch/pytorch"
+    ],
+    "dataProcessing": {
+        "inputFormat": "ImageNet",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/abs/2104.00298"
+    ],
+    "isPrivate": false,
+    "projectId": ""
+}

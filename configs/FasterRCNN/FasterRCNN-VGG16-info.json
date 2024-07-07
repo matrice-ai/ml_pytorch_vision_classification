@@ -1,0 +1,38 @@
+{
+    "modelKey": "FasterRCNN-VGG16",
+    "modelName": "Faster R-CNN - VGG16",
+    "_idModelFamily": "",
+    "paramsMillions": 138,
+    "supportedRuntimes": [
+      "PyTorch",
+      "TensorFlow"
+    ],
+    "recommendedRuntime": [
+      "PyTorch"
+    ],
+    "benchmarkResults": [
+      {
+        "benchmarkDataset": "PASCAL VOC 2007",
+        "metric": "mAP",
+        "value": 73.2
+      },
+      {
+        "benchmarkDataset": "COCO",
+        "metric": "mAP",
+        "value": 34.9
+      }
+    ],
+    "runtimeResults": [{
+      "runtime": "PyTorch",
+      "latency": 120,
+      "batchSize": 1,
+      "computeInstance": "",
+      "computeType": "GPU",
+      "CPUType": "null",
+      "numCPUCores": -1,
+      "memory": -1,
+      "GPUType": "V100",
+      "numGPU": -1
+    }]
+  }
+  

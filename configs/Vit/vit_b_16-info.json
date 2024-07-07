@@ -1,0 +1,40 @@
+{
+    "modelKey": "vit_b_16",
+    "modelName": "ViT-B/16",
+    "_idModelFamily": "",
+    "paramsMillions": 86.6,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 81.072
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 95.318
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 7.246,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "A100",
+            "numGPU": 1
+        }
+    ]
+}

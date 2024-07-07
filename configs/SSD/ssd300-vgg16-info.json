@@ -1,0 +1,43 @@
+{
+    "modelKey": "ssd300-vgg16",
+    "modelName": "SSD300/VGG16",
+    "_idModelFamily": "",
+    "paramsMillions": 35.64,
+    "supportedRuntimes": [
+        "PyTorch"
+    ],
+    "recommendedRuntime": [
+        "PyTorch"
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "COCO",
+            "metric": "mAP@50",
+            "value": 41.2
+        },
+        {
+            "benchmarkDataset": "COCO",
+            "metric": "mAP@75",
+            "value": 23.4
+        },
+        {
+            "benchmarkDataset": "COCO",
+            "metric": "mAP@50:95",
+            "value": 23.2
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 36.5,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "Titan X",
+            "numGPU": 1
+        }
+    ]
+}

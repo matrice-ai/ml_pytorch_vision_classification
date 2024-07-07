@@ -1,0 +1,68 @@
+{
+    "modelFamily": "CLIP",
+    "modelInputs": "image",
+    "modelOutputs": "classification",
+    "models": [
+        {
+            "modelKey": "ViT-B32",
+            "modelName": "ViT-B/32"
+        },
+        {
+            "modelKey": "RN50",
+            "modelName": "RN50"
+        },
+        {
+            "modelKey": "RN101",
+            "modelName": "RN101"
+        },
+        {
+            "modelKey": "RN50x4",
+            "modelName": "RN50x4"
+        },
+        {
+            "modelKey": "RN50x16",
+            "modelName": "RN50x16"
+        },
+        {
+            "modelKey": "RN50x64",
+            "modelName": "RN50x64"
+        },
+        {
+            "modelKey": "ViT-B16",
+            "modelName": "ViT-B/16"
+        },
+        {
+            "modelKey": "ViT-L14",
+            "modelName": "ViT-L/14"
+        },
+        {
+            "modelKey": "ViT-L14@336px",
+            "modelName": "ViT-L/14@336px"
+        }
+    ],
+    "description": "CLIP (Contrastive Language-Image Pre-Training) is a neural network trained on a variety of (image, text) pairs. It can be instructed in natural language to predict the most relevant text snippet, given an image, without directly optimizing for the task, similarly to the zero-shot capabilities of GPT-2 and 3. We found CLIP matches the performance of the original ResNet50 on ImageNet \u201czero-shot\u201d without using any of the original 1.28M labeled examples, overcoming several major challenges in computer vision.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch"
+    ],
+    "benchmarkDatasets": [
+        "ImageNet"
+    ],
+    "supportedMetrics": [
+        "acc@1"
+    ],
+    "pruningSupport": false,
+    "codeRepository": "https://github.com/openai/CLIP",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-ml-assisted-annotation:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "ImageNet",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/abs/2103.00020"
+    ],
+    "isPrivate": false
+}

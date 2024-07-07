@@ -1,0 +1,73 @@
+{
+    "modelFamily": "EfficientNet",
+    "modelInputs": "image",
+    "modelOutputs": "classification",
+    "models": [
+        {
+            "modelKey": "efficientnet_b0",
+            "modelName": "EfficientNet B0"
+        },
+        {
+            "modelKey": "efficientnet_b1",
+            "modelName": "EfficientNet B1"
+        },
+        {
+            "modelKey": "efficientnet_b2",
+            "modelName": "EfficientNet B2"
+        },
+        {
+            "modelKey": "efficientnet_b3",
+            "modelName": "EfficientNet B3"
+        },
+        {
+            "modelKey": "efficientnet_b4",
+            "modelName": "EfficientNet B4"
+        },
+        {
+            "modelKey": "efficientnet_b5",
+            "modelName": "EfficientNet B5"
+        },
+        {
+            "modelKey": "efficientnet_b6",
+            "modelName": "EfficientNet B6"
+        },
+        {
+            "modelKey": "efficientnet_b7",
+            "modelName": "EfficientNet B7"
+        }
+    ],
+    "description": "EfficientNet is a convolutional neural network built upon a concept called\n                    \"compound scaling.\u201d This concept addresses the longstanding trade-off\n                    between model size, accuracy, and computational efficiency.\n                    It is one of the best models for image classification.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "benchmarkDatasets": [
+        "ImageNet"
+    ],
+    "supportedMetrics": [
+        "acc@1",
+        "acc@5",
+        "f1_score",
+        "recall",
+        "precision",
+        "specificity"
+    ],
+    "pruningSupport": false,
+    "codeRepository": "https://github.com/pytorch/vision/blob/main/torchvision/models/efficientnet.py",
+    "trainingDockerContainer": [
+        "pytorch/pytorch"
+    ],
+    "dataProcessing": {
+        "inputFormat": "ImageNet",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/abs/1905.11946"
+    ],
+    "isPrivate": false,
+    "projectId": ""
+}
