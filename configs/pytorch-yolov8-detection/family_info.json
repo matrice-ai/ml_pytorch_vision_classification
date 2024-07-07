@@ -1,0 +1,65 @@
+{
+    "modelFamily": "YoloV8",
+    "modelInputs": "image",
+    "modelOutputs": "detection",
+    "models": [
+        {
+            "modelKey": "yolov8n",
+            "modelName": "YOLOv8 Nano"
+        },
+        {
+            "modelKey": "yolov8s",
+            "modelName": "YOLOv8 Small"
+        },
+        {
+            "modelKey": "yolov8m",
+            "modelName": "YOLOv8 Medium"
+        },
+        {
+            "modelKey": "yolov8l",
+            "modelName": "YOLOv8 Large"
+        },
+        {
+            "modelKey": "yolov8x",
+            "modelName": "YOLOv8 Xtra Large"
+        }
+    ],
+    "description": "Yolov8 is one of the SOTA models in object detection.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO",
+        "TensorRT",
+        "TorchScript"
+    ],
+    "benchmarkDatasets": [
+        "MSCOCO"
+    ],
+    "supportedMetrics": [
+        "mAP50",
+        "mAP50-95",
+        "recall",
+        "precision",
+        "fitness",
+        "mAP",
+        "AP",
+        "f1_score"
+    ],
+    "pruningSupport": false,
+    "codeRepository": "https://github.com/ultralytics/ultralytics",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/yolov8:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "yolo",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://github.com/ultralytics/ultralytics"
+    ],
+    "isPrivate": false,
+    "projectId": ""
+}

@@ -1,0 +1,33 @@
+{
+    "modelKey": "ViT-B32",
+    "modelName": "ViT-B/32",
+    "_idModelFamily": "",
+    "paramsMillions": 88.2,
+    "supportedRuntimes": [
+        "PyTorch"
+    ],
+    "recommendedRuntime": [
+        "PyTorch"
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "acc@1",
+            "value": 63.2
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 1.047,
+            "batchSize": 1,
+            "computeInstance": "",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "A100",
+            "numGPU": 1
+        }
+    ]
+}

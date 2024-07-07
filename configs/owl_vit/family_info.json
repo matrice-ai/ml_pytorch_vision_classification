@@ -1,0 +1,43 @@
+{
+    "modelFamily": "Owl_VIT",
+    "modelInputs": "image",
+    "modelOutputs": "detection",
+    "models": [
+        {
+            "modelKey": "googleowlvit-base-patch32",
+            "modelName": "google/owlvit-base-patch32"
+        },
+        {
+            "modelKey": "googleowlvit-large-patch14",
+            "modelName": "google/owlvit-large-patch14"
+        }
+    ],
+    "description": "OWL-ViT is a zero-shot text-conditioned object detection model. OWL-ViT uses CLIP as its multi-modal backbone, with a ViT-like Transformer to get visual features and a causal language model to get the text features.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch"
+    ],
+    "benchmarkDatasets": [
+        "ImageNet",
+        "COCO"
+    ],
+    "supportedMetrics": [
+        "AP@50",
+        "AP@75",
+        "AP@50:95"
+    ],
+    "pruningSupport": false,
+    "codeRepository": "https://huggingface.co/docs/transformers/en/model_doc/owlvit",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-ml-assisted-annotation:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "MSCOCO",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/abs/2205.06230"
+    ],
+    "isPrivate": false
+}

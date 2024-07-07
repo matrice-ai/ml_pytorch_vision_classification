@@ -1,0 +1,46 @@
+{
+    "modelFamily": "SSD",
+    "modelInputs": "image",
+    "modelOutputs": "Detection",
+    "models": [
+        {
+            "modelKey": "ssd300-vgg16",
+            "modelName": "SSD300/VGG16"
+        },
+        {
+            "modelKey": "ssd512-vgg16",
+            "modelName": "SSD512/VGG16"
+        }
+        ],
+    "description": "SSD (Single Shot MultiBox Detector) is a single-stage object detection model that uses a feed-forward convolutional network to directly predict class probabilities and bounding box offsets for a fixed set of default bounding boxes at multiple feature map locations, efficiently handling objects of various sizes.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO",
+        "TensorRT"
+    ],
+    "benchmarkDatasets": [
+        "COCO"
+    ],
+   "supportedMetrics": [
+        "mAP@50",
+        "mAP@75",
+        "mAP@50:95"
+    ],
+    "pruningSupport": true,
+    "codeRepository": "https://github.com/weiliu89/caffe/tree/ssd",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "ImageNet",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/pdf/1512.02325"
+    ],
+    "isPrivate": false
+}

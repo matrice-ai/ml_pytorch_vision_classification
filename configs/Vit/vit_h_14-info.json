@@ -1,0 +1,27 @@
+{
+    "modelKey": "vit_h_14",
+    "modelName": "ViT-H/14",
+    "_idModelFamily": "",
+    "paramsMillions": 633.5,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 88.552
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 98.694
+        }
+    ],
+    "runtimeResults": []
+}

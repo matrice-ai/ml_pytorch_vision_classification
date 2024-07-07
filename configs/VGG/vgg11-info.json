@@ -1,0 +1,27 @@
+{
+    "modelKey": "vgg11",
+    "modelName": "VGG11",
+    "_idModelFamily": "",
+    "paramsMillions": 132.9,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 70.37
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 89.81
+        }
+    ],
+    "runtimeResults": []
+}

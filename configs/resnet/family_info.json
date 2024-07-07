@@ -1,0 +1,61 @@
+{
+    "modelFamily": "ResNet",
+    "modelInputs": "image",
+    "modelOutputs": "classification",
+    "models": [
+        {
+            "modelKey": "resnet18",
+            "modelName": "ResNet-18"
+        },
+        {
+            "modelKey": "resnet34",
+            "modelName": "ResNet-34"
+        },
+        {
+            "modelKey": "resnet50",
+            "modelName": "ResNet-50"
+        },
+        {
+            "modelKey": "resnet101",
+            "modelName": "ResNet-101"
+        },
+        {
+            "modelKey": "resnet152",
+            "modelName": "ResNet-152"
+        }
+    ],
+    "description": "ResNet (Residual Network) is a deep neural network architecture that introduces skip connections, or shortcuts, to jump over some layers. This helps in addressing the vanishing gradient problem and allows training of very deep networks.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "TensorFlow",
+        "ONNX",
+        "OpenVINO",
+        "TensorRT"
+    ],
+    "benchmarkDatasets": [
+        "ImageNet"
+    ],
+    "supportedMetrics": [
+        "acc@1",
+        "acc@5",
+        "f1_score",
+        "recall",
+        "precision",
+        "specificity"
+    ],
+    "pruningSupport": true,
+    "codeRepository": "https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "ImageNet",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/abs/1512.03385"
+    ],
+    "isPrivate": false
+}

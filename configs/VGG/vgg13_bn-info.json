@@ -1,0 +1,27 @@
+{
+    "modelKey": "vgg13_bn",
+    "modelName": "VGG13 with Batch Normalization",
+    "_idModelFamily": "",
+    "paramsMillions": 133.1,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO"
+    ],
+    "recommendedRuntime": [
+        ""
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-1 Validation Accuracy",
+            "value": 71.586
+        },
+        {
+            "benchmarkDataset": "ImageNet",
+            "metric": "Top-5 Validation Accuracy",
+            "value": 90.374
+        }
+    ],
+    "runtimeResults": []
+}
