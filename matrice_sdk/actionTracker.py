@@ -12,6 +12,8 @@ import tarfile
 from matrice_sdk.matrice import Session
 from matrice_sdk.models import Model
 from matrice_sdk import rpc
+import yaml
+from pycocotools.coco import COCO
 
 
 class dotdict(dict):
@@ -22,7 +24,7 @@ class dotdict(dict):
 
 
 class ActionTracker:
-    
+
     def __init__(self, action_id=None):
         try:
             session = Session()
@@ -61,10 +63,11 @@ class ActionTracker:
                 self.session = session
             except Exception as e:
                 print('update project error', e)
-            
+
             try:
+                print(self.get_job_params())
                 self.checkpoint_path, self.pretrained = self.get_checkpoint_path(self.get_job_params())
-                print('aloo')    
+                print('aloo')
             except Exception as e:
                 print('get checkpoint error', e)
 
@@ -73,7 +76,7 @@ class ActionTracker:
             self.log_error(__file__, '__init__', str(e))
             self.update_status("error", "error", "Initialization failed")
             sys.exit(1)
-            
+
     def log_error(filename, function_name, error_message, meh):
         """ "This function logs error to be-system."""
         traceback_str = traceback.format_exc().rstrip()
@@ -92,7 +95,7 @@ class ActionTracker:
         #r.post(url=error_logging_route, data=log_err)
         print("An exception occurred. Logging the exception information:")
 
-    
+
     def download_model_1(self, model_save_path, presigned_url):
         try:
             response = requests.get(presigned_url)
@@ -298,7 +301,7 @@ class ActionTracker:
             print(f"Exception in get_index_to_category: {str(e)}")
             self.update_status("error", "error", "Failed to get index to category")
             sys.exit(1)
-    
+
 import os
 import shutil
 import requests
@@ -314,6 +317,7 @@ class LocalActionTracker(ActionTracker):
         self.model_name = model_name
         self.model_arch = model_arch
         self.output_type = output_type
+        self.checkpoint_path, self.pretrained = self.get_checkpoint_path()
         self.action_type = action_type
         assert action_id is None, "Action ID should be None for LocalActionTracker"
         self.action_doc = self.mock_action_doc()
@@ -337,7 +341,7 @@ class LocalActionTracker(ActionTracker):
                 mock_dataset = response['data']
             else:
                 raise ValueError("Invalid response from the API call")
-            
+
             action_details = {
             '_idModel': 'mocked_model_id',
             'runtimeFramework': 'Pytorch',
@@ -379,11 +383,15 @@ class LocalActionTracker(ActionTracker):
             # Prepare the dataset according to the project type
             if project_type == 'classification':
                 self.prepare_classification_dataset(dataset_dir)
+        
             elif project_type == 'detection':
-                self.prepare_detection_dataset(dataset_dir)
+                if self.model_name=='Yolov8':
+                    self.prepare_yolo_dataset(dataset_dir)
+                else:
+                    self.prepare_detection_dataset(dataset_dir)
             else:
                 print(f"Unsupported project type: {project_type}")
-            
+
 
     def download_and_extract_dataset(self, dataset_url, dataset_dir):
         # Extract the file name from the URL
@@ -394,20 +402,20 @@ class LocalActionTracker(ActionTracker):
             # Download the file
             with requests.get(dataset_url, stream=True) as r:
                 r.raise_for_status()
-                
+
                 print(f"Response status code: {r.status_code}")
                 print(f"Response headers: {r.headers}")
-                
+
                 content_type = r.headers.get('Content-Type', 'Unknown')
                 print(f"Content-Type: {content_type}")
-                
+
                 # Save the file
                 with open(local_file_path, 'wb') as f:
                     shutil.copyfileobj(r.raw, f)
-                
+
             print(f"File downloaded successfully from {dataset_url}")
             print(f"Saved as: {local_file_path}")
-            
+
             # Extract the file based on its extension
             if file_name.endswith('.zip'):
                 with zipfile.ZipFile(local_file_path, 'r') as zip_ref:
@@ -424,7 +432,7 @@ class LocalActionTracker(ActionTracker):
             # Remove the compressed file after extraction
             os.remove(local_file_path)
             print(f"Removed the compressed file: {local_file_path}")
-                
+
         except requests.exceptions.RequestException as e:
             print(f"Error downloading dataset from {dataset_url}: {e}")
         except (zipfile.BadZipFile, tarfile.TarError) as e:
@@ -443,7 +451,7 @@ class LocalActionTracker(ActionTracker):
         else:
             return ''  # Unknown type, no extension
 
-    
+
     def prepare_classification_dataset(self, dataset_dir):
         print("Preparing classification dataset...")
 
@@ -467,20 +475,20 @@ class LocalActionTracker(ActionTracker):
             dst_split_dir = os.path.join(images_dir, split)
             os.makedirs(dst_split_dir, exist_ok=True)
             split_info[split] = {}
-            
+
             for class_name in os.listdir(split_dir):
                 class_dir = os.path.join(split_dir, class_name)
                 if os.path.isdir(class_dir):
                     class_names.add(class_name)
                     dst_class_dir = os.path.join(dst_split_dir, class_name)
                     os.makedirs(dst_class_dir, exist_ok=True)
-                    
+
                     # Copy images and keep track of which split they belong to
                     for img in os.listdir(class_dir):
                         src_path = os.path.join(class_dir, img)
                         dst_path = os.path.join(dst_class_dir, img)
                         shutil.copy2(src_path, dst_path)
-                        
+
                         if class_name not in split_info[split]:
                             split_info[split][class_name] = []
                         split_info[split][class_name].append(dst_path)
@@ -490,7 +498,7 @@ class LocalActionTracker(ActionTracker):
         self.class_names = list(class_names)
 
         print(f"Number of classes: {self.num_classes}")
-        print(f"Class names: {self.class_names}")          
+        print(f"Class names: {self.class_names}")
 
         # Optionally, you can save the split information for later use
         # For example, you could save it as a JSON file
@@ -498,25 +506,25 @@ class LocalActionTracker(ActionTracker):
         with open(os.path.join(dataset_dir, 'split_info.json'), 'w') as f:
             json.dump(split_info, f)
 
+
+
     
-
-
 
     def prepare_detection_dataset(self, dataset_dir):
         print("Preparing detection dataset...")
 
         # Find the downloaded folder
         contents = os.listdir(dataset_dir)
-        downloaded_dirs = [d for d in contents if os.path.isdir(os.path.join(dataset_dir, d)) 
+        downloaded_dirs = [d for d in contents if os.path.isdir(os.path.join(dataset_dir, d))
                         and d not in ('images', 'annotations')]
-        
+
         if not downloaded_dirs:
             print("No suitable subdirectory found in the dataset directory.")
             return
-        
+
         if len(downloaded_dirs) > 1:
             print(f"Multiple subdirectories found: {downloaded_dirs}. Using the first one.")
-        
+
         downloaded_dir = os.path.join(dataset_dir, downloaded_dirs[0])
         print(f"Found downloaded directory: {downloaded_dir}")
 
@@ -553,10 +561,141 @@ class LocalActionTracker(ActionTracker):
 
         print("Dataset preparation completed.")
 
+
+    def convert_bbox_to_yolo(self, size, box):
+        dw = 1. / size[0]
+        dh = 1. / size[1]
+        x = (box[0] + box[2] / 2.0) * dw
+        y = (box[1] + box[3] / 2.0) * dh
+        w = box[2] * dw
+        h = box[3] * dh
+        return (x, y, w, h)
+
+    def create_data_yaml(dataset_dir, class_names):
+        data_yaml = {
+            'path': dataset_dir,
+            'train': os.path.join(dataset_dir, 'images/train2017'),
+            'val': os.path.join(dataset_dir, 'images/val2017'),
+            'test': os.path.join(dataset_dir, 'images/test2017'),
+            'names': class_names
+        }
+
+        yaml_path = os.path.join(dataset_dir, 'data.yaml')
+        with open(yaml_path, 'w') as file:
+            yaml.dump(data_yaml, file, default_flow_style=False)
+
+        print(f"Created data.yaml file at {yaml_path}")
+
+    def prepare_yolo_dataset(self, dataset_dir):
+        print("Preparing YOLO dataset...")
+
+        # Find the downloaded folder
+        contents = os.listdir(dataset_dir)
+        downloaded_dirs = [d for d in contents if os.path.isdir(os.path.join(dataset_dir, d))
+                        and d not in ('images', 'annotations')]
+
+        if not downloaded_dirs:
+            print("No suitable subdirectory found in the dataset directory.")
+            return
+
+        if len(downloaded_dirs) > 1:
+            print(f"Multiple subdirectories found: {downloaded_dirs}. Using the first one.")
+
+        downloaded_dir = os.path.join(dataset_dir, downloaded_dirs[0])
+        print(f"Found downloaded directory: {downloaded_dir}")
+
+        # Source paths
+        src_images_dir = os.path.join(downloaded_dir, 'images')
+        src_annotations_dir = os.path.join(downloaded_dir, 'annotations')
+
+        # Destination paths
+        dst_images_dir = os.path.join(dataset_dir, 'images')
+        dst_annotations_dir = os.path.join(dataset_dir, 'annotations')
+
+        # Move images folder
+        if os.path.exists(src_images_dir):
+            if os.path.exists(dst_images_dir):
+                shutil.rmtree(dst_images_dir)
+            shutil.move(src_images_dir, dst_images_dir)
+            print(f"Moved images folder to {dst_images_dir}")
+        else:
+            print("Images folder not found in the downloaded directory")
+
+        # Move annotations folder
+        if os.path.exists(src_annotations_dir):
+            if os.path.exists(dst_annotations_dir):
+                shutil.rmtree(dst_annotations_dir)
+            shutil.move(src_annotations_dir, dst_annotations_dir)
+            print(f"Moved annotations folder to {dst_annotations_dir}")
+        else:
+            print("Annotations folder not found in the downloaded directory")
+
+        # Convert annotations to YOLO format
+        annotation_file = os.path.join(dst_annotations_dir, 'instances_train2017.json')
+        coco = COCO(annotation_file)
+        img_dir = dst_images_dir
+        ann_dir = os.path.join(dataset_dir, 'labels')
+        if not os.path.exists(ann_dir):
+            os.makedirs(ann_dir)
+
+        # Get class names
+        categories = coco.loadCats(coco.getCatIds())
+        class_names = [category['name'] for category in categories]
+
+        for img_id in coco.getImgIds():
+            img_info = coco.loadImgs(img_id)[0]
+            img_filename = img_info['file_name']
+            img_width = img_info['width']
+            img_height = img_info['height']
+
+            ann_ids = coco.getAnnIds(imgIds=img_id)
+            anns = coco.loadAnns(ann_ids)
+
+            with open(os.path.join(ann_dir, img_filename.replace('.jpg', '.txt')), 'w') as f:
+                for ann in anns:
+                    bbox = ann['bbox']
+                    yolo_bbox = self.convert_bbox_to_yolo((img_width, img_height), bbox)
+                    category_id = ann['category_id'] - 1
+                    f.write(f"{category_id} {' '.join(map(str, yolo_bbox))}\n")
+
+        # Remove the downloaded folder if it's empty
+        if os.path.exists(downloaded_dir) and not os.listdir(downloaded_dir):
+            os.rmdir(downloaded_dir)
+            print(f"Removed empty downloaded folder: {downloaded_dir}")
+
+        # Create the data.yaml file
+        self.create_data_yaml(dataset_dir, class_names)
+
+        print("Dataset preparation completed.")
+
+
+    def get_checkpoint_path(self):
+        try:
+            checkpoint_dir = "./checkpoints"
+            # Ensure the checkpoints directory exists
+            if not os.path.exists(checkpoint_dir):
+                os.makedirs(checkpoint_dir)
+                print(f"Created checkpoint directory: {checkpoint_dir}")
+                return None, False  # No checkpoints available
+            # List all files in the checkpoints directory
+            checkpoint_files = [f for f in os.listdir(checkpoint_dir) if f.endswith('.pt')]
+            if not checkpoint_files:
+                print("No checkpoint files found in the checkpoints directory.")
+                return None, False
+            # If there are multiple checkpoints, you might want to choose the most recent one
+            # For simplicity, we're just choosing the first one here
+            checkpoint_path = os.path.join(checkpoint_dir, checkpoint_files[0])
+            print(f"Found checkpoint: {checkpoint_path}")
+            return checkpoint_path, True
+        except Exception as e:
+            self.log_error(__file__, 'get_checkpoint_path', str(e))
+            print(f"Exception in get_checkpoint_path: {str(e)}")
+            return None, False
+
     def create_config(self):
         model_name = self.model_name
         action_type = self.action_type
-        
+
         if action_type == 'train':
             config_path = os.path.join(os.getcwd(), 'configs', model_name, 'train-config.json')
 
@@ -580,7 +719,7 @@ class LocalActionTracker(ActionTracker):
 
         elif action_type == 'export':
             config_dir = os.path.join(os.path.dirname(os.getcwd()), 'config', model_name)
-            
+
             if os.path.exists(config_dir) and os.path.isdir(config_dir):
                 self.export_configs = {}
                 for file_name in os.listdir(config_dir):
@@ -605,7 +744,7 @@ class LocalActionTracker(ActionTracker):
         elif value_type == 'bool':
             return bool(value)
         else:
-            return value         
+            return value
 
     def update_status(self, stepCode, status, status_description):
         print(f"Mock update status: {stepCode}, {status}, {status_description}")
@@ -620,6 +759,8 @@ class LocalActionTracker(ActionTracker):
         with open(local_model_file, 'rb') as src, open(model_path, 'wb') as dest:
             dest.write(src.read())
         return True
+    
+    
 
     def get_job_params(self):
         # Return job params according to the requirements in train.py
@@ -628,8 +769,8 @@ class LocalActionTracker(ActionTracker):
         'data': f"workspace/{dataset_path}/images",
         'val_ratio': 0.1,
         'test_ratio': 0.1,
-        'batch_size': 32,
-        'epochs': 10,
+        'batch_size': 1,
+        'epochs': 1,
         'lr': 0.001,
         'momentum': 0.9,
         'weight_decay': 0.0001,
@@ -642,7 +783,9 @@ class LocalActionTracker(ActionTracker):
         'gpu': 0,
         'dataset_path': dataset_path,
         'opt': 'adamw',
-        'lr_scheduler': 'steplr'
+        'model_key':self.model_arch,
+        'lr_scheduler': 'steplr',
+        'checkpoint_path':self.checkpoint_path
     })
 
         return model_config
@@ -666,7 +809,7 @@ class LocalActionTracker(ActionTracker):
             with open(file_path, 'w') as file:
                 json.dump(index_to_category, file)
             return index_to_category
-        
+
     def log_epoch_results(self, epoch, epoch_result_list):
         try:
             model_log_payload = {
@@ -676,7 +819,7 @@ class LocalActionTracker(ActionTracker):
             }
 
             print(model_log_payload)
-            
+
         except Exception as e:
             self.log_error(__file__, 'log_epoch_results', str(e))
             print(f"Exception in log_epoch_results: {str(e)}")
@@ -684,18 +827,18 @@ class LocalActionTracker(ActionTracker):
             sys.exit(1)
 
     def get_metrics(data_loader, model , device, index_to_labels):
-        
+
         all_outputs = []
         all_targets = []
-        
+
         print(model)
         print(device)
         print(index_to_labels)
-        
+
         # Set model to evaluation mode for inference
         model.eval()
         print("Model evaluating")
-        
+
         # Accumulate predictions (detcetion)
         # with torch.no_grad():
         #     for images, targets in data_loader:
@@ -705,37 +848,5 @@ class LocalActionTracker(ActionTracker):
         #         outputs = model(images)
         #         all_outputs.extend(outputs)
         #         all_targets.extend(targets)
-        
+
         print("Model evaluated")
-        
-
-    
-
-    def get_checkpoint_path(self):
-        try:
-            checkpoint_dir = "./checkpoints"
-            
-            # Ensure the checkpoints directory exists
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
-                print(f"Created checkpoint directory: {checkpoint_dir}")
-                return None, False  # No checkpoints available
-            
-            # List all files in the checkpoints directory
-            checkpoint_files = [f for f in os.listdir(checkpoint_dir) if f.endswith('.pt')]
-            
-            if not checkpoint_files:
-                print("No checkpoint files found in the checkpoints directory.")
-                return None, False
-            
-            # If there are multiple checkpoints, you might want to choose the most recent one
-            # For simplicity, we're just choosing the first one here
-            checkpoint_path = os.path.join(checkpoint_dir, checkpoint_files[0])
-            print(f"Found checkpoint: {checkpoint_path}")
-            
-            return checkpoint_path, True
-
-        except Exception as e:
-            self.log_error(__file__, 'get_checkpoint_path', str(e))
-            print(f"Exception in get_checkpoint_path: {str(e)}")
-            return None, False
