@@ -1,7 +1,6 @@
 {
     "modelKey": "ViT-L14",
     "modelName": "ViT-L/14",
-    "_idModelFamily": "",
     "paramsMillions": 307.3,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,7 +12,8 @@
         {
             "benchmarkDataset": "ImageNet",
             "metric": "acc@1",
-            "value": 75.3
+            "value": 75.3,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [

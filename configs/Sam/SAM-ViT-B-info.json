@@ -13,12 +13,14 @@
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@50",
-            "value": 62.9
+            "value": 62.9,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@75",
-            "value": 46.7
+            "value": 46.7,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

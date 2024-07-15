@@ -24,7 +24,9 @@
     "supportedMetrics": [
         "AP@50",
         "AP@75",
-        "AP@50:95"
+        "AP@50",
+        "mAP@50",
+        "mAP@75"
     ],
     "pruningSupport": false,
     "codeRepository": "https://huggingface.co/docs/transformers/en/model_doc/owlvit",

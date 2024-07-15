@@ -16,8 +16,9 @@
     "benchmarkResults": [
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-1 Validation Accuracy",
-            "value": 69.8
+            "metric": "acc@1",
+            "value": 69.8,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [

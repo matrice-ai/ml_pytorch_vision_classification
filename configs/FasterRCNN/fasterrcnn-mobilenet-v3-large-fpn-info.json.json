@@ -1,0 +1,37 @@
+{
+    "modelKey": "fasterrcnn-mobilenet-v3-large-fpn",
+    "modelName": "Faster R-CNN MobileNetV3-Large-FPN",
+    "_idModelFamily": "Faster R-CNN",
+    "paramsMillions": 21.9,
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "OpenVINO",
+        "TensorRT"
+    ],
+    "recommendedRuntime": [
+        "PyTorch"
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "COCO",
+            "metric": "AP@50",
+            "value": 32.3,
+            "splitType":"val"
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "PyTorch",
+            "latency": 22,
+            "batchSize": 1,
+            "computeInstance": "AWS p3.2xlarge",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "V100",
+            "numGPU": 1
+        }
+    ]
+}
