@@ -1,7 +1,6 @@
 {
     "modelKey": "efficientnet_v2_m",
     "modelName": "EfficientNetV2 Medium",
-    "_idModelFamily": "",
     "paramsMillions": 54.1,
     "supportedRuntimes": [
         "PyTorch",
@@ -14,13 +13,15 @@
     "benchmarkResults": [
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-1 Validation Accuracy",
-            "value": 85.112
+            "metric": "acc@1",
+            "value": 85.112,
+            "splitType": "test"
         },
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-5 Validation Accuracy",
-            "value": 97.156
+            "metric": "acc@5",
+            "value": 97.156,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [

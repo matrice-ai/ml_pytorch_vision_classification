@@ -1,7 +1,6 @@
 {
     "modelKey": "googleowlvit-large-patch14",
     "modelName": "google/owlvit-large-patch14",
-    "_idModelFamily": "",
     "paramsMillions": 616.0,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,17 +12,20 @@
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@50",
-            "value": 39.6
+            "value": 39.6,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@75",
-            "value": 20.2
+            "value": 20.2,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
-            "metric": "mAP@50:95",
-            "value": 21.8
+            "metric": "mAP@50",
+            "value": 21.8,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

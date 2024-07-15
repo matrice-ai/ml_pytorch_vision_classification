@@ -1,19 +1,18 @@
 {
-    "_idModelFamily": "",
     "actionType": "train_model",
     "actionConfig": [
         {
             "keyName": "batch_size",
             "valueType": "int32",
-            "defaultValue": "4",
+            "defaultValue": 4,
             "predefinedValues": [
-                "1",
-                "2",
-                "4",
-                "8",
-                "16",
-                "32",
-                "64"
+                1,
+                2,
+                4,
+                8,
+                16,
+                32,
+                64
             ],
             "minValue": 1,
             "maxValue": 1024,
@@ -26,22 +25,22 @@
         {
             "keyName": "epochs",
             "valueType": "int32",
-            "defaultValue": "50",
+            "defaultValue": 50,
             "predefinedValues": [
-                "10",
-                "20",
-                "30",
-                "40",
-                "50",
-                "60",
-                "70",
-                "80",
-                "90",
-                "100",
-                "125",
-                "150",
-                "175",
-                "200"
+                10,
+                20,
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100,
+                125,
+                150,
+                175,
+                200
             ],
             "minValue": 5,
             "maxValue": 300,
@@ -54,15 +53,15 @@
         {
             "keyName": "learning_rate",
             "valueType": "float32",
-            "defaultValue": "0.001",
+            "defaultValue": 0.001,
             "predefinedValues": [
-                "0.00001",
-                "0.0001",
-                "0.001",
-                "0.01",
-                "0.02",
-                "0.05",
-                "0.1"
+                1e-05,
+                0.0001,
+                0.001,
+                0.01,
+                0.02,
+                0.05,
+                0.1
             ],
             "minValue": 1e-05,
             "maxValue": 0.5,
@@ -75,19 +74,19 @@
         {
             "keyName": "momentum",
             "valueType": "float32",
-            "defaultValue": "0.95",
+            "defaultValue": 0.95,
             "predefinedValues": [
-                "0.90",
-                "0.91",
-                "0.92",
-                "0.93",
-                "0.94",
-                "0.95",
-                "0.96",
-                "0.97",
-                "0.98",
-                "0.99",
-                "0.995"
+                0.9,
+                0.91,
+                0.92,
+                0.93,
+                0.94,
+                0.95,
+                0.96,
+                0.97,
+                0.98,
+                0.99,
+                0.995
             ],
             "minValue": 0.8,
             "maxValue": 0.995,
@@ -100,11 +99,11 @@
         {
             "keyName": "weight_decay",
             "valueType": "float64",
-            "defaultValue": "0.0001",
+            "defaultValue": 0.0001,
             "predefinedValues": [
-                "0.0001",
-                "0.001",
-                "0.0002"
+                0.0001,
+                0.001,
+                0.0002
             ],
             "minValue": 0,
             "maxValue": 0.1,
@@ -151,13 +150,13 @@
         {
             "keyName": "lr_step_size",
             "valueType": "int32",
-            "defaultValue": "10",
+            "defaultValue": 10,
             "predefinedValues": [
-                "5",
-                "10",
-                "15",
-                "20",
-                "25"
+                5,
+                10,
+                15,
+                20,
+                25
             ],
             "minValue": 1,
             "maxValue": 50,
@@ -170,13 +169,13 @@
         {
             "keyName": "lr_min",
             "valueType": "float32",
-            "defaultValue": "0.00001",
+            "defaultValue": 1e-05,
             "predefinedValues": [
-                "0.00001",
-                "0.0001",
-                "0.001",
-                "0.01",
-                "0.1"
+                1e-05,
+                0.0001,
+                0.001,
+                0.01,
+                0.1
             ],
             "minValue": 1e-05,
             "maxValue": 1.0,
@@ -189,13 +188,13 @@
         {
             "keyName": "lr_gamma",
             "valueType": "float32",
-            "defaultValue": "0.1",
+            "defaultValue": 0.1,
             "predefinedValues": [
-                "0.1",
-                "0.2",
-                "0.5",
-                "0.9",
-                "0.95"
+                0.1,
+                0.2,
+                0.5,
+                0.9,
+                0.95
             ],
             "minValue": 0.01,
             "maxValue": 1.0,
@@ -208,13 +207,13 @@
         {
             "keyName": "patience",
             "valueType": "int32",
-            "defaultValue": "5",
+            "defaultValue": 5,
             "predefinedValues": [
-                "5",
-                "10",
-                "15",
-                "20",
-                "25"
+                5,
+                10,
+                15,
+                20,
+                25
             ],
             "minValue": 1,
             "maxValue": 50,
@@ -227,13 +226,13 @@
         {
             "keyName": "min_delta",
             "valueType": "float32",
-            "defaultValue": "0.0001",
+            "defaultValue": 0.0001,
             "predefinedValues": [
-                "0.00001",
-                "0.0001",
-                "0.001",
-                "0.01",
-                "0.1"
+                1e-05,
+                0.0001,
+                0.001,
+                0.01,
+                0.1
             ],
             "minValue": 1e-05,
             "maxValue": 1.0,
@@ -244,7 +243,6 @@
             ]
         }
     ],
-    "dockerImage": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
     "isPrivateDocker": false,
     "dockerInformation": {
         "accessKey": "",

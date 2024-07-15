@@ -1,7 +1,6 @@
 {
     "modelKey": "googlenet",
     "modelName": "GoogleNet (Inception)",
-    "_idModelFamily": "",
     "paramsMillions": 6.6,
     "supportedRuntimes": [
         "PyTorch",
@@ -14,13 +13,15 @@
     "benchmarkResults": [
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-1 Validation Accuracy",
-            "value": 69.778
+            "metric": "acc@1",
+            "value": 69.778,
+            "splitType": "test"
         },
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-5 Validation Accuracy",
-            "value": 89.53
+            "metric": "acc@5",
+            "value": 89.53,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [

@@ -1,5 +1,4 @@
 {
-    "_idModelFamily": "",
     "actionType": "export_model",
     "exportFormat": "EdgeTPU",
     "actionConfig": [],

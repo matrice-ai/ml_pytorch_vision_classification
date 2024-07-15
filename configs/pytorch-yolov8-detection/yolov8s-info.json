@@ -1,7 +1,6 @@
 {
     "modelKey": "yolov8s",
     "modelName": "YOLOv8 Small",
-    "_idModelFamily": "",
     "paramsMillions": 11.2,
     "recommendedRuntime": [
         "ONNX",
@@ -9,9 +8,10 @@
     ],
     "benchmarkResults": [
         {
-            "benchmarkDataset": "MSCOCO",
+            "benchmarkDataset": "COCO",
             "metric": "mAP",
-            "value": 44.9
+            "value": 44.9,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

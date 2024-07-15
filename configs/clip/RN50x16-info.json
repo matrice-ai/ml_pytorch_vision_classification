@@ -1,7 +1,6 @@
 {
     "modelKey": "RN50x16",
     "modelName": "RN50x16",
-    "_idModelFamily": "",
     "paramsMillions": 410.0,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,7 +12,8 @@
         {
             "benchmarkDataset": "ImageNet",
             "metric": "acc@1",
-            "value": 70.5
+            "value": 70.5,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [
