@@ -9,11 +9,12 @@ import requests
 import shutil
 import zipfile
 import tarfile
+import yaml
+from pycocotools.coco import COCO
 from matrice_sdk.matrice import Session
 from matrice_sdk.models import Model
 from matrice_sdk import rpc
-import yaml
-from pycocotools.coco import COCO
+from tqdm import tqdm
 
 
 class dotdict(dict):
@@ -316,10 +317,33 @@ class LocalActionTracker(ActionTracker):
         self.local_model_path = local_model_path
         self.model_name = model_name
         self.model_arch = model_arch
-        self.output_type = output_type
+        
         self.checkpoint_path, self.pretrained = self.get_checkpoint_path()
         self.action_type = action_type
         assert action_id is None, "Action ID should be None for LocalActionTracker"
+
+        
+        model_name = self.model_name
+        output_config_path = os.path.join(os.getcwd(), 'configs', model_name, 'family_info.json')
+        print(output_config_path)
+        
+        if os.path.exists(output_config_path):
+                with open(output_config_path, 'r') as config_file:
+                    config_data = json.load(config_file)
+                print(f"Loaded family info config for model {model_name}: {config_data}")
+                
+                # Extract and store the inputFormat value
+                data_processing = config_data.get('dataProcessing', {})
+                self.output_type = data_processing.get('inputFormat')
+                
+                if self.output_type:
+                    print(f"Output type (inputFormat): {self.output_type}")
+                else:
+                    raise KeyError(f"'inputFormat' not found in the 'dataProcessing' section for model {model_name}")
+
+        else:
+            raise FileNotFoundError(f"Family info configuration file not found for model {model_name} at {output_config_path}")
+        
         self.action_doc = self.mock_action_doc()
         self.action_details = self.action_doc['actionDetails']
 
@@ -362,9 +386,9 @@ class LocalActionTracker(ActionTracker):
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
-
+        
     def prepare_dataset(self):
-        dataset_images_dir = 'workspace/dataset'
+        dataset_images_dir = 'datasets/workspace/dataset'
 
         if os.path.exists(dataset_images_dir):
             print(f"Dataset directory {dataset_images_dir} already exists. Skipping download and preparation.")
@@ -381,49 +405,56 @@ class LocalActionTracker(ActionTracker):
             self.download_and_extract_dataset(dataset_url, dataset_dir)
 
             # Prepare the dataset according to the project type
-            if project_type == 'classification':
+            if project_type == 'ImageNet':
+                self.output_type = 'classification'
                 self.prepare_classification_dataset(dataset_dir)
-        
-            elif project_type == 'detection':
-                if self.model_name=='Yolov8':
-                    self.prepare_yolo_dataset(dataset_dir)
-                else:
-                    self.prepare_detection_dataset(dataset_dir)
+            elif project_type == 'MSCOCO':
+                self.output_type ='detection'
+                self.prepare_detection_dataset(dataset_dir)
+            elif project_type == 'YOLO':
+                self.output_type = 'detection'
+                self.prepare_yolo_dataset(dataset_dir)
             else:
                 print(f"Unsupported project type: {project_type}")
 
 
     def download_and_extract_dataset(self, dataset_url, dataset_dir):
-        # Extract the file name from the URL
         file_name = os.path.basename(dataset_url)
         local_file_path = os.path.join(dataset_dir, file_name)
 
         try:
-            # Download the file
+            # Download the file with a progress bar
             with requests.get(dataset_url, stream=True) as r:
                 r.raise_for_status()
 
-                print(f"Response status code: {r.status_code}")
-                print(f"Response headers: {r.headers}")
+                total_size = int(r.headers.get('content-length', 0))
+                block_size = 1024  # 1 Kibibyte
+                t = tqdm(total=total_size, unit='iB', unit_scale=True, desc="Downloading")
 
-                content_type = r.headers.get('Content-Type', 'Unknown')
-                print(f"Content-Type: {content_type}")
-
-                # Save the file
                 with open(local_file_path, 'wb') as f:
-                    shutil.copyfileobj(r.raw, f)
+                    for data in r.iter_content(block_size):
+                        t.update(len(data))
+                        f.write(data)
+                t.close()
+
+                if total_size != 0 and t.n != total_size:
+                    print("ERROR: Something went wrong with the download")
+                    return
 
             print(f"File downloaded successfully from {dataset_url}")
             print(f"Saved as: {local_file_path}")
 
-            # Extract the file based on its extension
+            # Extract the file based on its extension with a progress bar
             if file_name.endswith('.zip'):
                 with zipfile.ZipFile(local_file_path, 'r') as zip_ref:
-                    zip_ref.extractall(dataset_dir)
+                    for file in tqdm(iterable=zip_ref.namelist(), total=len(zip_ref.namelist()), unit='file', desc="Extracting"):
+                        zip_ref.extract(member=file, path=dataset_dir)
                 print("Zip file extracted successfully")
             elif file_name.endswith('.tar.gz') or file_name.endswith('.tgz'):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(path=dataset_dir)
+                    members = tar.getmembers()
+                    for member in tqdm(iterable=members, total=len(members), unit='file', desc="Extracting"):
+                        tar.extract(member=member, path=dataset_dir)
                 print("Tar.gz file extracted successfully")
             else:
                 print(f"Unsupported file format: {file_name}")
@@ -437,7 +468,7 @@ class LocalActionTracker(ActionTracker):
             print(f"Error downloading dataset from {dataset_url}: {e}")
         except (zipfile.BadZipFile, tarfile.TarError) as e:
             print(f"Error extracting dataset from {local_file_path}: {e}")
-
+            
     def get_file_extension(self, content_type):
         content_type = content_type.lower()
         if 'zip' in content_type:
@@ -562,112 +593,83 @@ class LocalActionTracker(ActionTracker):
         print("Dataset preparation completed.")
 
 
-    def convert_bbox_to_yolo(self, size, box):
-        dw = 1. / size[0]
-        dh = 1. / size[1]
-        x = (box[0] + box[2] / 2.0) * dw
-        y = (box[1] + box[3] / 2.0) * dh
-        w = box[2] * dw
-        h = box[3] * dh
-        return (x, y, w, h)
+    def convert_coco_to_yolo(self, coco_file, images_dir, output_dir, dataset_type):
+        coco = COCO(coco_file)
+        os.makedirs(os.path.join(output_dir, 'images'), exist_ok=True)
+        os.makedirs(os.path.join(output_dir, 'labels'), exist_ok=True)
 
-    def create_data_yaml(dataset_dir, class_names):
-        data_yaml = {
-            'path': dataset_dir,
-            'train': os.path.join(dataset_dir, 'images/train2017'),
-            'val': os.path.join(dataset_dir, 'images/val2017'),
-            'test': os.path.join(dataset_dir, 'images/test2017'),
-            'names': class_names
-        }
+        cat_ids = coco.getCatIds()
+        coco_to_yolo_id = {cat_id: i for i, cat_id in enumerate(cat_ids)}
 
-        yaml_path = os.path.join(dataset_dir, 'data.yaml')
-        with open(yaml_path, 'w') as file:
-            yaml.dump(data_yaml, file, default_flow_style=False)
+        for image_id in tqdm(coco.getImgIds(), desc=f"Converting {dataset_type} annotations"):
+            image_info = coco.loadImgs(image_id)[0]
+            ann_ids = coco.getAnnIds(imgIds=image_id)
+            annotations = coco.loadAnns(ann_ids)
 
-        print(f"Created data.yaml file at {yaml_path}")
+            label_file = os.path.join(output_dir, 'labels', f"{image_info['file_name'].split('.')[0]}.txt")
 
-    def prepare_yolo_dataset(self, dataset_dir):
-        print("Preparing YOLO dataset...")
-
-        # Find the downloaded folder
-        contents = os.listdir(dataset_dir)
-        downloaded_dirs = [d for d in contents if os.path.isdir(os.path.join(dataset_dir, d))
-                        and d not in ('images', 'annotations')]
-
-        if not downloaded_dirs:
-            print("No suitable subdirectory found in the dataset directory.")
-            return
-
-        if len(downloaded_dirs) > 1:
-            print(f"Multiple subdirectories found: {downloaded_dirs}. Using the first one.")
-
-        downloaded_dir = os.path.join(dataset_dir, downloaded_dirs[0])
-        print(f"Found downloaded directory: {downloaded_dir}")
-
-        # Source paths
-        src_images_dir = os.path.join(downloaded_dir, 'images')
-        src_annotations_dir = os.path.join(downloaded_dir, 'annotations')
-
-        # Destination paths
-        dst_images_dir = os.path.join(dataset_dir, 'images')
-        dst_annotations_dir = os.path.join(dataset_dir, 'annotations')
-
-        # Move images folder
-        if os.path.exists(src_images_dir):
-            if os.path.exists(dst_images_dir):
-                shutil.rmtree(dst_images_dir)
-            shutil.move(src_images_dir, dst_images_dir)
-            print(f"Moved images folder to {dst_images_dir}")
-        else:
-            print("Images folder not found in the downloaded directory")
-
-        # Move annotations folder
-        if os.path.exists(src_annotations_dir):
-            if os.path.exists(dst_annotations_dir):
-                shutil.rmtree(dst_annotations_dir)
-            shutil.move(src_annotations_dir, dst_annotations_dir)
-            print(f"Moved annotations folder to {dst_annotations_dir}")
-        else:
-            print("Annotations folder not found in the downloaded directory")
-
-        # Convert annotations to YOLO format
-        annotation_file = os.path.join(dst_annotations_dir, 'instances_train2017.json')
-        coco = COCO(annotation_file)
-        img_dir = dst_images_dir
-        ann_dir = os.path.join(dataset_dir, 'labels')
-        if not os.path.exists(ann_dir):
-            os.makedirs(ann_dir)
-
-        # Get class names
-        categories = coco.loadCats(coco.getCatIds())
-        class_names = [category['name'] for category in categories]
-
-        for img_id in coco.getImgIds():
-            img_info = coco.loadImgs(img_id)[0]
-            img_filename = img_info['file_name']
-            img_width = img_info['width']
-            img_height = img_info['height']
-
-            ann_ids = coco.getAnnIds(imgIds=img_id)
-            anns = coco.loadAnns(ann_ids)
-
-            with open(os.path.join(ann_dir, img_filename.replace('.jpg', '.txt')), 'w') as f:
-                for ann in anns:
+            with open(label_file, 'w') as f:
+                for ann in annotations:
+                    category_id = coco_to_yolo_id[ann['category_id']]
                     bbox = ann['bbox']
-                    yolo_bbox = self.convert_bbox_to_yolo((img_width, img_height), bbox)
-                    category_id = ann['category_id'] - 1
-                    f.write(f"{category_id} {' '.join(map(str, yolo_bbox))}\n")
+                    x_center = (bbox[0] + bbox[2] / 2) / image_info['width']
+                    y_center = (bbox[1] + bbox[3] / 2) / image_info['height']
+                    width = bbox[2] / image_info['width']
+                    height = bbox[3] / image_info['height']
+                    f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
 
-        # Remove the downloaded folder if it's empty
-        if os.path.exists(downloaded_dir) and not os.listdir(downloaded_dir):
-            os.rmdir(downloaded_dir)
-            print(f"Removed empty downloaded folder: {downloaded_dir}")
+            src_image = os.path.join(images_dir, image_info['file_name'])
+            dst_image = os.path.join(output_dir, 'images', image_info['file_name'])
+            # Check if source image exists and is a file
+            if os.path.isfile(src_image):
+                shutil.copy(src_image, dst_image)
+            else:
+                print(f"Warning: Source image {src_image} not found or is not a file.")
 
-        # Create the data.yaml file
-        self.create_data_yaml(dataset_dir, class_names)
 
-        print("Dataset preparation completed.")
+    def get_class_names(self, ann_file):
+        coco = COCO(ann_file)
+        cats = coco.loadCats(coco.getCatIds())
+        return [cat['name'] for cat in cats]
 
+    def create_yaml(self, data_dir, class_names, dataset_dir):
+        yaml_content = {
+            'train': os.path.abspath(os.path.join(data_dir, 'yolo_train', 'images')),
+            'val': os.path.abspath(os.path.join(data_dir, 'yolo_val', 'images')),
+            'test': os.path.abspath(os.path.join(data_dir, 'yolo_test', 'images')),
+            'nc': len(class_names),
+            'names': {i: name for i, name in enumerate(class_names)}
+        }
+        
+        
+        with open(os.path.join(dataset_dir, 'data.yaml'), 'w') as f:
+            yaml.dump(yaml_content, f)
+        
+    import os
+    import shutil
+    from pycocotools.coco import COCO
+    
+    def prepare_yolo_dataset(self, dataset_dir):
+        
+        sub_dirs = [os.path.join(dataset_dir, d) for d in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, d))]
+        if len(sub_dirs) != 1:
+            raise ValueError("Expected a single subdirectory in the dataset directory")
+        data_dir = sub_dirs[0]
+        print(f"Main Sub directory: {data_dir}")
+        
+        for subset in ['train', 'val', 'test']:
+            ann_file = os.path.join(data_dir, 'annotations', f'instances_{subset}2017.json')
+            images_dir = os.path.join(data_dir,'images',f'{subset}2017')
+            output_dir = os.path.join(data_dir, f'yolo_{subset}')
+            
+            self.convert_coco_to_yolo(ann_file, images_dir, output_dir, subset)
+
+        class_names = self.get_class_names(os.path.join(data_dir, 'annotations', 'instances_train2017.json'))
+        self.create_yaml(data_dir, class_names , dataset_dir)
+        print("Preparation completed")
+        
+
+    
 
     def get_checkpoint_path(self):
         try:
@@ -691,6 +693,7 @@ class LocalActionTracker(ActionTracker):
             self.log_error(__file__, 'get_checkpoint_path', str(e))
             print(f"Exception in get_checkpoint_path: {str(e)}")
             return None, False
+                        
 
     def create_config(self):
         model_name = self.model_name
@@ -766,11 +769,11 @@ class LocalActionTracker(ActionTracker):
         # Return job params according to the requirements in train.py
         dataset_path = 'dataset'
         model_config = dotdict({
-        'data': f"workspace/{dataset_path}/images",
+        'data': f"workspace/{dataset_path}",
         'val_ratio': 0.1,
         'test_ratio': 0.1,
         'batch_size': 1,
-        'epochs': 1,
+        'epochs': 2,
         'lr': 0.001,
         'momentum': 0.9,
         'weight_decay': 0.0001,
