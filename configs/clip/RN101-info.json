@@ -1,7 +1,6 @@
 {
     "modelKey": "RN101",
     "modelName": "RN101",
-    "_idModelFamily": "",
     "paramsMillions": 44.7,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,7 +12,8 @@
         {
             "benchmarkDataset": "ImageNet",
             "metric": "acc@1",
-            "value": 62.2
+            "value": 62.2,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [

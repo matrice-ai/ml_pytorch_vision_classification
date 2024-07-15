@@ -1,7 +1,6 @@
 {
     "modelKey": "ssd512-vgg16",
     "modelName": "SSD512/VGG16",
-    "_idModelFamily": "",
     "paramsMillions": 27.8,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,17 +12,20 @@
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@50",
-            "value": 46.5
+            "value": 46.5,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@75",
-            "value": 27.8
+            "value": 27.8,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
-            "metric": "mAP@50:95",
-            "value": 26.8
+            "metric": "mAP@50",
+            "value": 26.8,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

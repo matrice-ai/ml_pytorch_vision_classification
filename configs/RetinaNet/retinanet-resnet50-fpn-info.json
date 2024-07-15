@@ -1,7 +1,6 @@
 {
     "modelKey": "retinanet-resnet50-fpn",
     "modelName": "RetinaNet/Resnet50-FPN",
-    "_idModelFamily": "",
     "paramsMillions": 34.09,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,17 +12,20 @@
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@50",
-            "value":59.1
+            "value": 59.1,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@75",
-            "value": 42.3
+            "value": 42.3,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP",
-            "value": 39.1
+            "value": 39.1,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

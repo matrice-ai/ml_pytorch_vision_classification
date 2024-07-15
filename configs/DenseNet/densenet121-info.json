@@ -1,7 +1,6 @@
 {
     "modelKey": "densenet121",
     "modelName": "DenseNet121",
-    "_idModelFamily": "",
     "paramsMillions": 8.0,
     "supportedRuntimes": [
         "PyTorch",
@@ -14,13 +13,15 @@
     "benchmarkResults": [
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-1 Validation Accuracy",
-            "value": 74.434
+            "metric": "acc@1",
+            "value": 74.434,
+            "splitType": "test"
         },
         {
             "benchmarkDataset": "ImageNet",
-            "metric": "Top-5 Validation Accuracy",
-            "value": 91.972
+            "metric": "acc@5",
+            "value": 91.972,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [
