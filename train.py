@@ -414,9 +414,7 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
-    print("Entering block 2")
     opt_name = model_config.optimizer.lower()
-    print(opt_name)
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
