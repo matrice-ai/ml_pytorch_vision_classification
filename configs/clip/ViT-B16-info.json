@@ -1,7 +1,6 @@
 {
     "modelKey": "ViT-B16",
     "modelName": "ViT-B/16",
-    "_idModelFamily": "",
     "paramsMillions": 86.6,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,7 +12,8 @@
         {
             "benchmarkDataset": "ImageNet",
             "metric": "acc@1",
-            "value": 68.6
+            "value": 68.6,
+            "splitType": "test"
         }
     ],
     "runtimeResults": [

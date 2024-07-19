@@ -1,7 +1,7 @@
 {
     "modelFamily": "RetinaNet",
     "modelInputs": "image",
-    "modelOutputs": "Detection",
+    "modelOutputs": "detection",
     "models": [
         {
             "modelKey": "retinanet-resnet50-fpn-v2",
@@ -11,7 +11,7 @@
             "modelKey": "retinanet-resnet50-fpn",
             "modelName": "RetinaNet/Resnet50-FPN"
         }
-        ],
+    ],
     "description": "RetinaNet is a single-stage object detection model that addresses the class imbalance problem during training using a novel Focal Loss function",
     "trainingFramework": "PyTorch",
     "supportedRuntimes": [
@@ -24,7 +24,7 @@
     "benchmarkDatasets": [
         "COCO"
     ],
-   "supportedMetrics": [
+    "supportedMetrics": [
         "mAP@50",
         "mAP@75",
         "mAP"

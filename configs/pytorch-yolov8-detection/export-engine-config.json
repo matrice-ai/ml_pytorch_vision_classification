@@ -1,12 +1,11 @@
 {
-    "_idModelFamily": "",
     "actionType": "export_model",
     "exportFormat": "TensorRT",
     "actionConfig": [
         {
             "keyName": "dynamic",
             "valueType": "bool",
-            "defaultValue": "false",
+            "defaultValue": false,
             "predefinedValues": [
                 true,
                 false

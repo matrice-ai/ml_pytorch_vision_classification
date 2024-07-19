@@ -1,0 +1,42 @@
+{
+    "modelFamily": "FCOS",
+    "modelInputs": "image",
+    "modelOutputs": "detection",
+    "models": [
+        {
+            "modelKey": "fcos_resnet50_fpn",
+            "modelName": "FCOS with ResNet-50-FPN"
+        }
+    ],
+    "description": "FCOS (Fully Convolutional One-Stage Object Detection) is an anchor-free object detection model that simplifies the detection process by predicting object locations directly on the feature map, eliminating the need for predefined anchor boxes.",
+    "trainingFramework": "PyTorch",
+    "supportedRuntimes": [
+        "PyTorch",
+        "ONNX",
+        "TensorRT"
+    ],
+    "benchmarkDatasets": [
+        "COCO"
+    ],
+    "supportedMetrics": [
+        "mAP",
+        "precision",
+        "recall",
+        "AP@50",
+        "AP@75"
+    ],
+    "pruningSupport": false,
+    "codeRepository": "https://github.com/pytorch/vision/blob/main/torchvision/models/detection/fcos.py",
+    "trainingDockerContainer": [
+        "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-coco:latest"
+    ],
+    "dataProcessing": {
+        "inputFormat": "COCO",
+        "dataLoaderClassDefinition": "null",
+        "dataLoaderCallSignature": "DataLoader(source_path, dest_path, **kwargs)"
+    },
+    "references": [
+        "https://arxiv.org/abs/1904.01355"
+    ],
+    "isPrivate": false
+}

@@ -39,3 +39,5 @@ scipy
 onnx
 onnxruntime
 openvino
+pycocotools
+bson

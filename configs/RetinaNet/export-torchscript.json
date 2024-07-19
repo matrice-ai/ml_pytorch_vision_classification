@@ -1,15 +1,14 @@
 {
-    "_idModelFamily": "",
     "actionType": "export_model",
     "exportFormat": "TorchScript",
     "actionConfig": [
         {
             "keyName": "optimize",
             "valueType": "bool",
-            "defaultValue": "False",
+            "defaultValue": false,
             "predefinedValues": [
-                "True",
-                "False"
+                true,
+                false
             ],
             "anyValue": false,
             "hyperparameter": true,
@@ -20,7 +19,6 @@
             ]
         }
     ],
-    "dockerImage": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
     "isPrivateDocker": false,
     "dockerInformation": {
         "accessKey": "",

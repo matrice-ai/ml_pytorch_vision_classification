@@ -1,12 +1,11 @@
 {
-    "_idModelFamily": "",
     "actionType": "export_model",
     "exportFormat": "TensorFlowJS",
     "actionConfig": [
         {
             "keyName": "int8",
             "valueType": "bool",
-            "defaultValue": "false",
+            "defaultValue": false,
             "predefinedValues": [
                 true,
                 false

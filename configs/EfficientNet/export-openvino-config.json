@@ -1,15 +1,14 @@
 {
-    "_idModelFamily": "",
     "actionType": "export_model",
     "exportFormat": "OpenVINO",
     "actionConfig": [
         {
             "keyName": "int8",
             "valueType": "bool",
-            "defaultValue": "False",
+            "defaultValue": false,
             "predefinedValues": [
-                "True",
-                "False"
+                true,
+                false
             ],
             "anyValue": false,
             "hyperparameter": true,
@@ -22,10 +21,10 @@
         {
             "keyName": "nms",
             "valueType": "bool",
-            "defaultValue": "False",
+            "defaultValue": false,
             "predefinedValues": [
-                "True",
-                "False"
+                true,
+                false
             ],
             "anyValue": false,
             "hyperparameter": true,
@@ -36,7 +35,6 @@
             ]
         }
     ],
-    "dockerImage": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
     "isPrivateDocker": false,
     "dockerInformation": {
         "accessKey": "",

@@ -1,5 +1,4 @@
 {
-    "_idModelFamily": "",
     "actionType": "deploy_model",
     "actionConfig": [
         {
@@ -18,7 +17,6 @@
             ]
         }
     ],
-    "dockerImage": "285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-ml-assisted-annotation:latest",
     "isPrivateDocker": true,
     "dockerInformation": {
         "accessKey": "",
