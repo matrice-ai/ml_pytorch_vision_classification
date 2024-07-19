@@ -389,7 +389,7 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
-    opt_name = model_config.opt.lower()
+    opt_name = model_config.optimizer.lower()
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
