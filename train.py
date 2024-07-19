@@ -144,7 +144,7 @@ def main(action_id=None):
             best_model = model
             save_checkpoint({
                 'epoch': epoch,
-                'arch': model_config.arch,
+                'arch': model_config.model_key,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
@@ -347,17 +347,17 @@ def load_data(model_config):
 
 
 def initialize_model(model_config, dataset):
-    print("=> using pre-trained model '{}'".format(model_config.arch))
+    print("=> using pre-trained model '{}'".format(model_config.model_key))
     
     # Get the model function or class
-    model_func = models.__dict__[model_config.arch]
+    model_func = models.__dict__[model_config.model_key]
     
     # Check if it's a callable (function or class)
     if callable(model_func):
         model = model_func(pretrained=model_config.pretrained)
     else:
         # If it's a module, we need to get the generating function
-        model = getattr(model_func, model_config.arch)(pretrained=model_config.pretrained)
+        model = getattr(model_func, model_config.model_key)(pretrained=model_config.pretrained)
     
     try:
         # Load checkpoint if available
