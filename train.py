@@ -65,6 +65,10 @@ def main(action_id=None):
 
     model_config = actionTracker.get_job_params()
     print('model_config is', model_config)
+    print(f"Debug: model_config.lr_step_size = {model_config.lr_step_size}")
+    print(f"Debug: model_config.lr_gamma = {model_config.lr_gamma}")
+    print(f"Debug: model_config.lr_min = {model_config.lr_min}")
+
 
     # Loading the data
     try:
@@ -412,20 +416,24 @@ def setup_optimizer(model, model_config):
 def setup_scheduler(optimizer, model_config):
     model_config.lr_scheduler = model_config.lr_scheduler.lower()
     if model_config.lr_scheduler == "steplr":
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma)
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma
+        )
     elif model_config.lr_scheduler == "cosineannealinglr":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=model_config.epochs, eta_min=model_config.lr_min
         )
     elif model_config.lr_scheduler == "exponentiallr":
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=model_config.lr_gamma)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer, gamma=model_config.lr_gamma
+        )
     else:
         raise RuntimeError(
-            f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR "
-            "are supported."
+            f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR are supported."
         )
 
     return scheduler
+
 
 def update_compute(model):
     
@@ -474,7 +482,7 @@ def save_checkpoint(state, model, is_best, filename='checkpoint.pth.tar'):
         print(f"Best model (PT format) saved to {best_pt_filepath}")
 
 class EarlyStopping:
-    def __init__(self, patience=5,min_delta=10):
+    def __init__(self, patience=5, min_delta=10):
         self.patience = patience
         self.counter = 0
         self.lowest_loss = None
@@ -485,15 +493,16 @@ class EarlyStopping:
         if self.lowest_loss is None:
             self.lowest_loss = val_loss
 
-        elif self.lowest_loss-val_loss  > self.min_delta:
+        elif self.lowest_loss - val_loss > self.min_delta:
             self.lowest_loss = val_loss
             self.counter = 0
 
-        elif self.lowest_loss-val_loss  < self.min_delta:
+        elif self.lowest_loss - val_loss < self.min_delta:
             self.counter += 1
-            print(f'Early stoping count is {self.counter}')
+            print(f'Early stopping count is {self.counter}')
             if self.counter >= self.patience:
                 self.stop = True
+
                     
 
 
