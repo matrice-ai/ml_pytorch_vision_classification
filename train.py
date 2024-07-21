@@ -365,7 +365,7 @@ def initialize_model(model_config, dataset):
     
     try:
         # Load checkpoint if available
-        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path()
+        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
         if checkpoint_found:
             print("Loading checkpoint from:", checkpoint_path)
             checkpoint = torch.load(checkpoint_path)
