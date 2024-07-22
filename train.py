@@ -65,10 +65,6 @@ def main(action_id=None):
 
     model_config = actionTracker.get_job_params()
     print('model_config is', model_config)
-    print(f"Debug: model_config.lr_step_size = {model_config.lr_step_size}")
-    print(f"Debug: model_config.lr_gamma = {model_config.lr_gamma}")
-    print(f"Debug: model_config.lr_min = {model_config.lr_min}")
-
 
     # Loading the data
     try:
@@ -97,7 +93,6 @@ def main(action_id=None):
             
     # Setting up the training of the model
     try:
-        print("Entering block 1")
         print("Entering block 1")
         criterion = nn.CrossEntropyLoss().to(device)
         print("Entering block 2")
@@ -405,16 +400,6 @@ def initialize_model(model_config, dataset):
                 model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
             else:
                 raise AttributeError("Unexpected classifier structure")
-            if isinstance(model.classifier, nn.Linear):
-                # For models like DenseNet where classifier is a single Linear layer
-                num_ftrs = model.classifier.in_features
-                model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
-            elif isinstance(model.classifier, nn.Sequential):
-                # For models where classifier is a Sequential module
-                num_ftrs = model.classifier[-1].in_features
-                model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
-            else:
-                raise AttributeError("Unexpected classifier structure")
         else:
             raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
@@ -429,7 +414,9 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
+    print("Entering block 2")
     opt_name = model_config.optimizer.lower()
+    print(opt_name)
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -457,25 +444,21 @@ def setup_scheduler(optimizer, model_config):
     model_config.lr_scheduler = model_config.lr_scheduler.lower()
     print("Reached Scheduler")
     if model_config.lr_scheduler == "steplr":
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma
-        )
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma)
     elif model_config.lr_scheduler == "cosineannealinglr":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=model_config.epochs, eta_min=model_config.lr_min
         )
     elif model_config.lr_scheduler == "exponentiallr":
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer, gamma=model_config.lr_gamma
-        )
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=model_config.lr_gamma)
     else:
         raise RuntimeError(
-            f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR are supported."
+            f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR "
+            "are supported."
         )
         
     print("Exited SCheduler")
     return scheduler
-
 
 def update_compute(model):
     
@@ -524,7 +507,7 @@ def save_checkpoint(state, model, is_best, filename='checkpoint.pth.tar'):
         print(f"Best model (PT format) saved to {best_pt_filepath}")
 
 class EarlyStopping:
-    def __init__(self, patience=5, min_delta=10):
+    def __init__(self, patience=5,min_delta=10):
         self.patience = patience
         self.counter = 0
         self.lowest_loss = None
@@ -535,16 +518,15 @@ class EarlyStopping:
         if self.lowest_loss is None:
             self.lowest_loss = val_loss
 
-        elif self.lowest_loss - val_loss > self.min_delta:
+        elif self.lowest_loss-val_loss  > self.min_delta:
             self.lowest_loss = val_loss
             self.counter = 0
 
-        elif self.lowest_loss - val_loss < self.min_delta:
+        elif self.lowest_loss-val_loss  < self.min_delta:
             self.counter += 1
-            print(f'Early stopping count is {self.counter}')
+            print(f'Early stoping count is {self.counter}')
             if self.counter >= self.patience:
                 self.stop = True
-
                     
 
 
