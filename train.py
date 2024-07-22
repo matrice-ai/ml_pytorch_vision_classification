@@ -65,10 +65,6 @@ def main(action_id=None):
 
     model_config = actionTracker.get_job_params()
     print('model_config is', model_config)
-    print(f"Debug: model_config.lr_step_size = {model_config.lr_step_size}")
-    print(f"Debug: model_config.lr_gamma = {model_config.lr_gamma}")
-    print(f"Debug: model_config.lr_min = {model_config.lr_min}")
-
 
     # Loading the data
     try:
@@ -420,7 +416,9 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
+
     opt_name = model_config.optimizer.lower()
+
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
