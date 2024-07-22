@@ -74,8 +74,8 @@ from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_im
                            check_yaml, colorstr, file_size, get_default_args, print_args, url2file, yaml_save)
 from export_utils.utils.torch_utils import select_device, smart_inference_mode
 
-from matrice_sdk.src.actionTracker import ActionTracker
-from matrice_sdk.src.matrice import Session
+from matrice_sdk.actionTracker import ActionTracker
+from matrice_sdk.matrice import Session
 
 MACOS = platform.system() == 'Darwin'  # macOS environment
 
@@ -537,8 +537,8 @@ def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
     assert platform.system() == 'Linux', f'export only supported on Linux. See {help_url}'
     try: #check if edge tpu compiler is installed 
         if subprocess.run(f'{cmd} > /dev/null 2>&1', shell=True).returncode != 0:
-            raise EnviormatError('Edge TPU compiler not found')
-    except EnviormentError:
+            raise EnvironmentError('Edge TPU compiler not found')
+    except EnvironmentError:
 
         #LOGGER.info(f'\n{prefix} export requires Edge TPU compiler. Attempting install from {help_url}')
         actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'Edge TPU Model Export has been acknowledged')
@@ -808,11 +808,9 @@ def run(
         iou_thres=0.45,  # TF.js NMS: IoU threshold
         conf_thres=0.25,  # TF.js NMS: confidence threshold
 ):
-    from python_sdk.src.actionTracker import ActionTracker
-    from python_sdk.matrice import Session
+    from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
 
-    session=Session()
-    actionTracker = ActionTracker(session,action_id)
+    actionTracker = ActionTracker(action_id)
 
     stepCode='MDL_EXP_ACK'
     status='OK'
@@ -844,7 +842,7 @@ try:
     flags = [x in include for x in fmts]
     assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}'
     jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle = flags  # export booleans
-except AssertonError as e:
+except AssertionError as e:
     print(e)
     raise
 except Exception as e:
