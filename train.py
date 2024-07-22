@@ -65,10 +65,6 @@ def main(action_id=None):
 
     model_config = actionTracker.get_job_params()
     print('model_config is', model_config)
-    print(f"Debug: model_config.lr_step_size = {model_config.lr_step_size}")
-    print(f"Debug: model_config.lr_gamma = {model_config.lr_gamma}")
-    print(f"Debug: model_config.lr_min = {model_config.lr_min}")
-
 
     # Loading the data
     try:
@@ -97,13 +93,9 @@ def main(action_id=None):
             
     # Setting up the training of the model
     try:
-        print("Entering block 1")
         criterion = nn.CrossEntropyLoss().to(device)
-        print("Entering block 2")
         optimizer = setup_optimizer(model, model_config)
-        print("Reached here first")
         scheduler = setup_scheduler(optimizer, model_config)
-        print("reached here")
         actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
         
     except Exception as e:
@@ -123,7 +115,7 @@ def main(action_id=None):
 
     for epoch in range(model_config.epochs):
         
-        print("Entered Training")
+        print("Entered Training loop : " , {epoch})
 
         # train for one epoch
         loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
@@ -165,7 +157,7 @@ def main(action_id=None):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, model,is_best)  
-            print(best_model)
+            
 
 
         early_stopping.update(loss_val)
@@ -335,7 +327,7 @@ def load_data(model_config):
             normalize,
         ]))
     
-    print("entered")
+   
     
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=model_config.batch_size, shuffle=False,
@@ -345,7 +337,7 @@ def load_data(model_config):
         val_dataset, batch_size=model_config.batch_size, shuffle=False,
         num_workers=4)
     
-    print("entered")
+    
     
     test_loader = None
     if os.path.exists(testdir):
@@ -373,7 +365,10 @@ def initialize_model(model_config, dataset):
     
     # Check if it's a callable (function or class)
     if callable(model_func):
-        model = model_func(pretrained=model_config.pretrained)
+        if model_config.model_key == 'googlenet':
+            model = model_func(pretrained=model_config.pretrained, aux_logits=False)
+        else:
+            model = model_func(pretrained=model_config.pretrained)
     else:
         # If it's a module, we need to get the generating function
         model = getattr(model_func, model_config.model_key)(pretrained=model_config.pretrained)
@@ -404,6 +399,7 @@ def initialize_model(model_config, dataset):
                 model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
             else:
                 raise AttributeError("Unexpected classifier structure")
+            
         else:
             raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
@@ -418,7 +414,9 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
+
     opt_name = model_config.optimizer.lower()
+
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -437,9 +435,9 @@ def setup_optimizer(model, model_config):
     else:
         raise RuntimeError(f"Invalid optimizer {model_config.optimizer}. Only SGD, RMSprop and AdamW are supported.")
     
-    print("ULALALALALALA")
+    
     print(optimizer)
-    print("ULALALALALALA")
+    
     return optimizer
 
 def setup_scheduler(optimizer, model_config):
