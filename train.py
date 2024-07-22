@@ -412,7 +412,7 @@ def initialize_model(model_config, dataset):
             else:
                 raise AttributeError("Model structure not recognized")
 
-        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Preliminary Model Loading done')
         
         print(model)
         
