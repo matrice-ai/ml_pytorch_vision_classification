@@ -65,6 +65,10 @@ def main(action_id=None):
 
     model_config = actionTracker.get_job_params()
     print('model_config is', model_config)
+    print(f"Debug: model_config.lr_step_size = {model_config.lr_step_size}")
+    print(f"Debug: model_config.lr_gamma = {model_config.lr_gamma}")
+    print(f"Debug: model_config.lr_min = {model_config.lr_min}")
+
 
     # Loading the data
     try:
@@ -93,9 +97,13 @@ def main(action_id=None):
             
     # Setting up the training of the model
     try:
+        print("Entering block 1")
         criterion = nn.CrossEntropyLoss().to(device)
+        print("Entering block 2")
         optimizer = setup_optimizer(model, model_config)
+        print("Reached here first")
         scheduler = setup_scheduler(optimizer, model_config)
+        print("reached here")
         actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
         
     except Exception as e:
@@ -115,7 +123,7 @@ def main(action_id=None):
 
     for epoch in range(model_config.epochs):
         
-        print("Entered Training loop : " , {epoch})
+        print("Entered Training")
 
         # train for one epoch
         loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
@@ -157,7 +165,7 @@ def main(action_id=None):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, model,is_best)  
-            
+            print(best_model)
 
 
         early_stopping.update(loss_val)
@@ -327,7 +335,7 @@ def load_data(model_config):
             normalize,
         ]))
     
-   
+    print("entered")
     
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=model_config.batch_size, shuffle=False,
@@ -337,7 +345,7 @@ def load_data(model_config):
         val_dataset, batch_size=model_config.batch_size, shuffle=False,
         num_workers=4)
     
-    
+    print("entered")
     
     test_loader = None
     if os.path.exists(testdir):
@@ -365,16 +373,14 @@ def initialize_model(model_config, dataset):
     
     # Check if it's a callable (function or class)
     if callable(model_func):
-        if model_config.model_key == 'googlenet':
-            model = model_func(pretrained=model_config.pretrained, aux_logits=False)
-        else:
-            model = model_func(pretrained=model_config.pretrained)
+        model = model_func(pretrained=model_config.pretrained)
     else:
         # If it's a module, we need to get the generating function
         model = getattr(model_func, model_config.model_key)(pretrained=model_config.pretrained)
     
     try:
         # Load checkpoint if available
+        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
         checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
         if checkpoint_found:
             print("Loading checkpoint from:", checkpoint_path)
@@ -385,11 +391,7 @@ def initialize_model(model_config, dataset):
             print("No checkpoint found. Using pre-trained or newly initialized weights.")
 
         # Modify the final layer
-        if model_config.model_key.startswith('squeezenet'):
-            # SqueezeNet-specific modification
-            model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
-            model.num_classes = len(dataset.classes)
-        elif hasattr(model, 'fc'):
+        if hasattr(model, 'fc'):
             num_ftrs = model.fc.in_features
             model.fc = nn.Linear(num_ftrs, len(dataset.classes))
         elif hasattr(model, 'classifier'):
@@ -404,15 +406,9 @@ def initialize_model(model_config, dataset):
             else:
                 raise AttributeError("Unexpected classifier structure")
         else:
-            # For models with non-standard final layer structures
-            if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
-                # This structure is common in some ResNet variants
-                num_ftrs = model.last_linear.in_features
-                model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
-            else:
-                raise AttributeError("Model structure not recognized")
+            raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
-        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Preliminary Model Loading done')
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
         
         print(model)
         
@@ -423,9 +419,7 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
-
     opt_name = model_config.optimizer.lower()
-
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -444,9 +438,9 @@ def setup_optimizer(model, model_config):
     else:
         raise RuntimeError(f"Invalid optimizer {model_config.optimizer}. Only SGD, RMSprop and AdamW are supported.")
     
-    
+    print("ULALALALALALA")
     print(optimizer)
-    
+    print("ULALALALALALA")
     return optimizer
 
 def setup_scheduler(optimizer, model_config):
