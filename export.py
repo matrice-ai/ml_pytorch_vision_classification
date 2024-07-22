@@ -409,7 +409,7 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
         with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
             t.write(engine.serialize())
     except Exception as e:
-        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine + ' str(e))
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine' +  str(e))
         return 
     return f, None
 
@@ -529,7 +529,7 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
     return f, None
 
 
-@@try_export
+@try_export
 def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
     # YOLOv5 Edge TPU export https://coral.ai/docs/edgetpu/models-intro/
     cmd = 'edgetpu_compiler --version'
