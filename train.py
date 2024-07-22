@@ -385,7 +385,11 @@ def initialize_model(model_config, dataset):
             print("No checkpoint found. Using pre-trained or newly initialized weights.")
 
         # Modify the final layer
-        if hasattr(model, 'fc'):
+        if model_config.model_key.startswith('squeezenet'):
+            # SqueezeNet-specific modification
+            model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
+            model.num_classes = len(dataset.classes)
+        elif hasattr(model, 'fc'):
             num_ftrs = model.fc.in_features
             model.fc = nn.Linear(num_ftrs, len(dataset.classes))
         elif hasattr(model, 'classifier'):
@@ -399,9 +403,14 @@ def initialize_model(model_config, dataset):
                 model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
             else:
                 raise AttributeError("Unexpected classifier structure")
-            
         else:
-            raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
+            # For models with non-standard final layer structures
+            if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
+                # This structure is common in some ResNet variants
+                num_ftrs = model.last_linear.in_features
+                model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
+            else:
+                raise AttributeError("Model structure not recognized")
 
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
         
