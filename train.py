@@ -381,7 +381,6 @@ def initialize_model(model_config, dataset):
     try:
         # Load checkpoint if available
         checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
-        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
         if checkpoint_found:
             print("Loading checkpoint from:", checkpoint_path)
             checkpoint = torch.load(checkpoint_path)
@@ -409,6 +408,8 @@ def initialize_model(model_config, dataset):
             raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
+        
+        print(model)
         
         print(model)
         
