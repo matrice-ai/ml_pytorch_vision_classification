@@ -1,0 +1,39 @@
+{
+    "actionType": "export_model",
+    "exportFormat": "TensorRT",
+    "actionConfig": [
+        {
+            "keyName": "precision",
+            "valueType": "string",
+            "defaultValue": "FP32",
+            "predefinedValues": [
+                "FP32",
+                "FP16",
+                "INT8"
+            ],
+            "anyValue": false,
+            "hyperparameter": true,
+            "minValue": 0,
+            "maxValue": 0,
+            "modelKeys": [
+                "all"
+            ]
+        }
+    ],
+    "isPrivateDocker": false,
+    "dockerInformation": {
+        "accessKey": "",
+        "secretKey": "",
+        "region": ""
+    },
+    "dockerContainerForAction": {
+        "dockerContainer": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
+        "isGpuRequired": true,
+        "cpuType": ""
+    },
+    "dockerContainerForEvaluation": {
+        "dockerContainer": "285699223019.dkr.ecr.us-west-2.amazonaws.com/pytorch-vision-imagenet:latest",
+        "isGpuRequired": true,
+        "cpuType": ""
+    }
+}

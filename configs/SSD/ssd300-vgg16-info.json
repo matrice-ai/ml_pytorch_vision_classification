@@ -1,7 +1,6 @@
 {
     "modelKey": "ssd300-vgg16",
     "modelName": "SSD300/VGG16",
-    "_idModelFamily": "",
     "paramsMillions": 35.64,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,17 +12,20 @@
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@50",
-            "value": 41.2
+            "value": 41.2,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@75",
-            "value": 23.4
+            "value": 23.4,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
-            "metric": "mAP@50:95",
-            "value": 23.2
+            "metric": "mAP@50",
+            "value": 23.2,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

@@ -1,7 +1,6 @@
 {
     "modelKey": "googleowlvit-base-patch32",
     "modelName": "google/owlvit-base-patch32",
-    "_idModelFamily": "",
     "paramsMillions": 86,
     "supportedRuntimes": [
         "PyTorch"
@@ -13,17 +12,20 @@
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@50",
-            "value": 37.8
+            "value": 37.8,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
             "metric": "mAP@75",
-            "value": 18.3
+            "value": 18.3,
+            "splitType": "val"
         },
         {
             "benchmarkDataset": "COCO",
-            "metric": "mAP@50:95",
-            "value": 19.6
+            "metric": "mAP@50",
+            "value": 19.6,
+            "splitType": "val"
         }
     ],
     "runtimeResults": [

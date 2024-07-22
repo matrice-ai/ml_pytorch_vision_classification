@@ -35,16 +35,16 @@
         "TorchScript"
     ],
     "benchmarkDatasets": [
-        "MSCOCO"
+        "COCO"
     ],
     "supportedMetrics": [
-        "mAP50",
-        "mAP50-95",
+        "mAP@50",
+        "mAP@50",
         "recall",
         "precision",
         "fitness",
         "mAP",
-        "AP",
+        "AP@50",
         "f1_score"
     ],
     "pruningSupport": false,
