@@ -21,7 +21,8 @@
         "ImageNet"
     ],
     "supportedMetrics": [
-        "Top-1 Validation Accuracy"
+        "acc@1",
+        "acc@5"
     ],
     "pruningSupport": false,
     "codeRepository": "https://github.com/pytorch/vision/blob/main/torchvision/models/alexnet.py",

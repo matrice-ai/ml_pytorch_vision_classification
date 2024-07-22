@@ -29,7 +29,9 @@
         "mAP",
         "mIoU",
         "AP@50",
-        "AP@75"
+        "AP@75",
+        "mAP@50",
+        "mAP@75"
     ],
     "pruningSupport": false,
     "codeRepository": "https://github.com/facebookresearch/segment-anything",
