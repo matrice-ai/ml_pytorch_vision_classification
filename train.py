@@ -98,6 +98,7 @@ def main(action_id=None):
     # Setting up the training of the model
     try:
         print("Entering block 1")
+        print("Entering block 1")
         criterion = nn.CrossEntropyLoss().to(device)
         print("Entering block 2")
         optimizer = setup_optimizer(model, model_config)
@@ -404,12 +405,20 @@ def initialize_model(model_config, dataset):
                 model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
             else:
                 raise AttributeError("Unexpected classifier structure")
+            if isinstance(model.classifier, nn.Linear):
+                # For models like DenseNet where classifier is a single Linear layer
+                num_ftrs = model.classifier.in_features
+                model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
+            elif isinstance(model.classifier, nn.Sequential):
+                # For models where classifier is a Sequential module
+                num_ftrs = model.classifier[-1].in_features
+                model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+            else:
+                raise AttributeError("Unexpected classifier structure")
         else:
             raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
-        
-        print(model)
         
         print(model)
         
@@ -420,7 +429,9 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
+    print("Entering block 2")
     opt_name = model_config.optimizer.lower()
+    print(opt_name)
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
