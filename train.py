@@ -93,9 +93,13 @@ def main(action_id=None):
             
     # Setting up the training of the model
     try:
+        print("Entering block 1")
         criterion = nn.CrossEntropyLoss().to(device)
+        print("Entering block 2")
         optimizer = setup_optimizer(model, model_config)
+        print("Reached here first")
         scheduler = setup_scheduler(optimizer, model_config)
+        print("reached here")
         actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
         
     except Exception as e:
@@ -108,8 +112,14 @@ def main(action_id=None):
     best_acc1 = -1.0
     best_model = None
     early_stopping=EarlyStopping(patience=model_config.patience,min_delta=model_config.min_delta)
+    
+    print("Starting Training")
+    
+    print(early_stopping)
 
     for epoch in range(model_config.epochs):
+        
+        print("Entered Training")
 
         # train for one epoch
         loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
@@ -133,6 +143,7 @@ def main(action_id=None):
                             {"splitType": "val", "metricName": "acc@5", "metricValue": acc5_val}]
 
             actionTracker.log_epoch_results(epoch ,epochDetails)
+            print(epochDetails)
             
         except Exception as e:
             actionTracker.update_status('MDL_TRN_EPOCH', 'ERROR', 'Error in logging training epoch details')
@@ -150,6 +161,7 @@ def main(action_id=None):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, model,is_best)  
+            print(best_model)
 
 
         early_stopping.update(loss_val)
@@ -161,11 +173,11 @@ def main(action_id=None):
     # Saving the best model and checkpoint 
     try:
         ## For using as a checkpoint for training other models
-        actionTracker.upload_checkpoint('model_best.pth.tar')
+        actionTracker.upload_checkpoint('checkpoints/model_best.pth.tar')
         
         ## For exporting, evaluation and deployment
-        torch.save(best_model, 'model_best.pt')
-        actionTracker.upload_checkpoint('model_best.pt')
+        torch.save(best_model, 'checkpoints/model_best.pt')
+        actionTracker.upload_checkpoint('checkpoints/model_best.pt')
     except:
         actionTracker.update_status('MDL_TRN_SBM', 'ERROR', 'Error in saving the best model')    
    
@@ -177,15 +189,18 @@ def main(action_id=None):
         ## Run on validation set
         if  os.path.exists(valdir):
             payload+=get_metrics('val',val_loader, best_model, index_to_labels)
+            print(payload)
+            
         ## Run on test set
         if  os.path.exists(testdir):
             payload+=get_metrics('test',test_loader, best_model, index_to_labels)
+            print(payload)
         
         actionTracker.save_evaluation_results(payload)
         actionTracker.update_status('MDL_TRN_SUCCESS', 'SUCCESS', 'Model training is successfully completed')
     
     except Exception as e:
-        actionTracker.udpate_status('MDL_TRN_EVAL', 'ERROR', 'Error in evaluation using the best model')
+        actionTracker.update_status('MDL_TRN_EVAL', 'ERROR', 'Error in evaluation using the best model')
         actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_TRN_EVAL: {str(e)}')
         print(f"Error updating status to MDL_TRN_EVAL: {str(e)}")
         sys.exit(1) 
@@ -361,7 +376,7 @@ def initialize_model(model_config, dataset):
     
     try:
         # Load checkpoint if available
-        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path()
+        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
         if checkpoint_found:
             print("Loading checkpoint from:", checkpoint_path)
             checkpoint = torch.load(checkpoint_path)
@@ -375,12 +390,22 @@ def initialize_model(model_config, dataset):
             num_ftrs = model.fc.in_features
             model.fc = nn.Linear(num_ftrs, len(dataset.classes))
         elif hasattr(model, 'classifier'):
-            num_ftrs = model.classifier[-1].in_features
-            model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+            if isinstance(model.classifier, nn.Linear):
+                # For models like DenseNet where classifier is a single Linear layer
+                num_ftrs = model.classifier.in_features
+                model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
+            elif isinstance(model.classifier, nn.Sequential):
+                # For models where classifier is a Sequential module
+                num_ftrs = model.classifier[-1].in_features
+                model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+            else:
+                raise AttributeError("Unexpected classifier structure")
         else:
             raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
+        
+        print(model)
         
     except Exception as e:
         print(f"Error in loading model: {str(e)}")
@@ -389,28 +414,35 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
-    opt_name = model_config.opt.lower()
+    print("Entering block 2")
+    opt_name = model_config.optimizer.lower()
+    print(opt_name)
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
-            lr=model_config.lr,
+            lr=model_config.learning_rate,
             momentum=model_config.momentum,
             weight_decay=model_config.weight_decay,
             nesterov="nesterov" in opt_name,
         )
     elif opt_name == "rmsprop":
         optimizer = torch.optim.RMSprop(
-            model.parameters(), lr=model_config.lr, momentum=model_config.momentum, weight_decay=model_config.weight_decay, eps=0.0316, alpha=0.9
+            model.parameters(), lr=model_config.learning_rate, momentum=model_config.momentum, weight_decay=model_config.weight_decay, eps=0.0316, alpha=0.9
         )
     elif opt_name == "adamw":
-        optimizer = torch.optim.AdamW(model.parameters(), lr=model_config.lr, weight_decay=model_config.weight_decay)
+        print("Entering block 3")
+        optimizer = torch.optim.AdamW(model.parameters(), lr=model_config.learning_rate, weight_decay=model_config.weight_decay)
     else:
-        raise RuntimeError(f"Invalid optimizer {model_config.opt}. Only SGD, RMSprop and AdamW are supported.")
-
+        raise RuntimeError(f"Invalid optimizer {model_config.optimizer}. Only SGD, RMSprop and AdamW are supported.")
+    
+    print("ULALALALALALA")
+    print(optimizer)
+    print("ULALALALALALA")
     return optimizer
 
 def setup_scheduler(optimizer, model_config):
     model_config.lr_scheduler = model_config.lr_scheduler.lower()
+    print("Reached Scheduler")
     if model_config.lr_scheduler == "steplr":
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma)
     elif model_config.lr_scheduler == "cosineannealinglr":
@@ -424,7 +456,8 @@ def setup_scheduler(optimizer, model_config):
             f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR "
             "are supported."
         )
-
+        
+    print("Exited SCheduler")
     return scheduler
 
 def update_compute(model):
