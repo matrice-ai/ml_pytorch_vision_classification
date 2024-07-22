@@ -93,13 +93,9 @@ def main(action_id=None):
             
     # Setting up the training of the model
     try:
-        print("Entering block 1")
         criterion = nn.CrossEntropyLoss().to(device)
-        print("Entering block 2")
         optimizer = setup_optimizer(model, model_config)
-        print("Reached here first")
         scheduler = setup_scheduler(optimizer, model_config)
-        print("reached here")
         actionTracker.update_status('MDL_TRN_STRT', 'OK', 'Model training is starting')
         
     except Exception as e:
@@ -119,7 +115,7 @@ def main(action_id=None):
 
     for epoch in range(model_config.epochs):
         
-        print("Entered Training")
+        print("Entered Training loop : " , {epoch})
 
         # train for one epoch
         loss_train,acc1_train, acc5_train =train(train_loader, model, criterion, optimizer, epoch, device, model_config)
@@ -161,7 +157,7 @@ def main(action_id=None):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, model,is_best)  
-            print(best_model)
+            
 
 
         early_stopping.update(loss_val)
@@ -331,7 +327,7 @@ def load_data(model_config):
             normalize,
         ]))
     
-    print("entered")
+   
     
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=model_config.batch_size, shuffle=False,
@@ -341,7 +337,7 @@ def load_data(model_config):
         val_dataset, batch_size=model_config.batch_size, shuffle=False,
         num_workers=4)
     
-    print("entered")
+    
     
     test_loader = None
     if os.path.exists(testdir):
@@ -369,7 +365,10 @@ def initialize_model(model_config, dataset):
     
     # Check if it's a callable (function or class)
     if callable(model_func):
-        model = model_func(pretrained=model_config.pretrained)
+        if model_config.model_key == 'googlenet':
+            model = model_func(pretrained=model_config.pretrained, aux_logits=False)
+        else:
+            model = model_func(pretrained=model_config.pretrained)
     else:
         # If it's a module, we need to get the generating function
         model = getattr(model_func, model_config.model_key)(pretrained=model_config.pretrained)
@@ -400,6 +399,7 @@ def initialize_model(model_config, dataset):
                 model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
             else:
                 raise AttributeError("Unexpected classifier structure")
+            
         else:
             raise AttributeError("Model doesn't have 'fc' or 'classifier' attribute")
 
@@ -414,9 +414,9 @@ def initialize_model(model_config, dataset):
     return model
 
 def setup_optimizer(model, model_config):
-    print("Entering block 2")
+
     opt_name = model_config.optimizer.lower()
-    print(opt_name)
+
     if opt_name.startswith("sgd"):
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -435,30 +435,34 @@ def setup_optimizer(model, model_config):
     else:
         raise RuntimeError(f"Invalid optimizer {model_config.optimizer}. Only SGD, RMSprop and AdamW are supported.")
     
-    print("ULALALALALALA")
+    
     print(optimizer)
-    print("ULALALALALALA")
+    
     return optimizer
 
 def setup_scheduler(optimizer, model_config):
     model_config.lr_scheduler = model_config.lr_scheduler.lower()
     print("Reached Scheduler")
     if model_config.lr_scheduler == "steplr":
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma)
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=model_config.lr_step_size, gamma=model_config.lr_gamma
+        )
     elif model_config.lr_scheduler == "cosineannealinglr":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=model_config.epochs, eta_min=model_config.lr_min
         )
     elif model_config.lr_scheduler == "exponentiallr":
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=model_config.lr_gamma)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer, gamma=model_config.lr_gamma
+        )
     else:
         raise RuntimeError(
-            f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR "
-            "are supported."
+            f"Invalid lr scheduler '{model_config.lr_scheduler}'. Only StepLR, CosineAnnealingLR and ExponentialLR are supported."
         )
         
     print("Exited SCheduler")
     return scheduler
+
 
 def update_compute(model):
     
@@ -507,7 +511,7 @@ def save_checkpoint(state, model, is_best, filename='checkpoint.pth.tar'):
         print(f"Best model (PT format) saved to {best_pt_filepath}")
 
 class EarlyStopping:
-    def __init__(self, patience=5,min_delta=10):
+    def __init__(self, patience=5, min_delta=10):
         self.patience = patience
         self.counter = 0
         self.lowest_loss = None
@@ -518,15 +522,16 @@ class EarlyStopping:
         if self.lowest_loss is None:
             self.lowest_loss = val_loss
 
-        elif self.lowest_loss-val_loss  > self.min_delta:
+        elif self.lowest_loss - val_loss > self.min_delta:
             self.lowest_loss = val_loss
             self.counter = 0
 
-        elif self.lowest_loss-val_loss  < self.min_delta:
+        elif self.lowest_loss - val_loss < self.min_delta:
             self.counter += 1
-            print(f'Early stoping count is {self.counter}')
+            print(f'Early stopping count is {self.counter}')
             if self.counter >= self.patience:
                 self.stop = True
+
                     
 
 
