@@ -309,7 +309,26 @@ def load_data(model_config):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                         std=[0.229, 0.224, 0.225])
 
-    train_dataset = datasets.ImageFolder(
+    if model_config.model_key.startswith('inception'):
+        train_dataset = datasets.ImageFolder(
+        traindir,
+        transforms.Compose([
+            transforms.RandomResizedCrop(299),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+
+        val_dataset = datasets.ImageFolder(
+            valdir,
+            transforms.Compose([
+                transforms.Resize(299),
+                transforms.CenterCrop(299),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+    else:
+        train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
             transforms.RandomResizedCrop(224),
@@ -318,15 +337,14 @@ def load_data(model_config):
             normalize,
         ]))
 
-    val_dataset = datasets.ImageFolder(
-        valdir,
-        transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ]))
-    
+        val_dataset = datasets.ImageFolder(
+            valdir,
+            transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                normalize,
+            ]))
    
     
     train_loader = torch.utils.data.DataLoader(
@@ -367,6 +385,8 @@ def initialize_model(model_config, dataset):
     if callable(model_func):
         if model_config.model_key == 'googlenet':
             model = model_func(pretrained=model_config.pretrained, aux_logits=False)
+        elif model_config.model_key.startswith('inception'):
+            model = model_func(pretrained=model_config.pretrained, aux_logits=False)    
         else:
             model = model_func(pretrained=model_config.pretrained)
     else:
@@ -412,7 +432,7 @@ def initialize_model(model_config, dataset):
             else:
                 raise AttributeError("Model structure not recognized")
 
-        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Initial Model has been loaded')
         
         print(model)
         
