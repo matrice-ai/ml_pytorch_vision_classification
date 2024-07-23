@@ -810,7 +810,9 @@ def run(
 ):
     from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
 
+
     global actionTracker
+
     actionTracker = ActionTracker(action_id)
 
     stepCode = 'MDL_EXP_ACK'
@@ -849,6 +851,7 @@ def run(
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         raise
+
 
     try:
         file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
