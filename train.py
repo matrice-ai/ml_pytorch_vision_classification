@@ -423,7 +423,24 @@ def initialize_model(model_config, dataset):
                 model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
             else:
                 raise AttributeError("Unexpected classifier structure")
+            if isinstance(model.classifier, nn.Linear):
+                # For models like DenseNet where classifier is a single Linear layer
+                num_ftrs = model.classifier.in_features
+                model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
+            elif isinstance(model.classifier, nn.Sequential):
+                # For models where classifier is a Sequential module
+                num_ftrs = model.classifier[-1].in_features
+                model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+            else:
+                raise AttributeError("Unexpected classifier structure")
         else:
+            # For models with non-standard final layer structures
+            if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
+                # This structure is common in some ResNet variants
+                num_ftrs = model.last_linear.in_features
+                model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
+            else:
+                raise AttributeError("Model structure not recognized")
             # For models with non-standard final layer structures
             if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
                 # This structure is common in some ResNet variants
