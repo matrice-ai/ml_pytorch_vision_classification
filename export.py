@@ -1,4 +1,3 @@
-# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Export a YOLOv5 PyTorch model to other formats. TensorFlow exports authored by https://github.com/zldrobit
 
@@ -70,9 +69,10 @@ if platform.system() != 'Windows':
 from export_utils.models.experimental import attempt_load
 from export_utils.models.yolo import ClassificationModel, Detect, DetectionModel, SegmentationModel
 from export_utils.utils.dataloaders import LoadImages
-from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_img_size, check_requirements, check_version,
+from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_img_size, check_version,
                            check_yaml, colorstr, file_size, get_default_args, print_args, url2file, yaml_save)
 from export_utils.utils.torch_utils import select_device, smart_inference_mode
+from ultralytics.utils.checks import check_requirements
 
 from matrice_sdk.actionTracker import ActionTracker
 from matrice_sdk.matrice import Session
@@ -122,7 +122,7 @@ def try_export(inner_func):
     inner_args = get_default_args(inner_func)
 
     def outer_func(*args, **kwargs):
-        prefix = inner_args['prefix']
+        prefix = inner_args.get('prefix', 'Unknown')
         try:
             with Profile() as dt:
                 f, model = inner_func(*args, **kwargs)
@@ -176,15 +176,15 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
 
     try:
         torch.onnx.export(
-        model.cpu() if dynamic else model,  # --dynamic only compatible with cpu
-        im.cpu() if dynamic else im,
-        f,
-        verbose=False,
-        opset_version=opset,
-        do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
-        input_names=['images'],
-        output_names=output_names,
-        dynamic_axes=dynamic or None
+            model.cpu() if dynamic else model,  # --dynamic only compatible with cpu
+            im.cpu() if dynamic else im,
+            f,
+            verbose=False,
+            opset_version=opset,
+            do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
+            input_names=['images'],
+            output_names=output_names,
+            dynamic_axes=dynamic or None
         )
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting ONNX model : ' + str(e))
@@ -219,7 +219,7 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
         except Exception as e:
             #LOGGER.info(f'{prefix} simplifier failure: {e}')
             actionTracker.update_status('MDL_EXPT_SIMPLIFY_FAIL', 'ERROR', 'ERROR in simplifying ONNX model : ' + str(e))
-            return
+            return None, None
     return f, model_onnx
 
 
@@ -291,7 +291,7 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
         yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting OpenVINO model :' + str(e))
-        return
+        return None, None
     return f, None
 
 
@@ -303,7 +303,7 @@ def export_paddle(model, im, file, metadata, prefix=colorstr('PaddlePaddle:')):
     from x2paddle.convert import pytorch2paddle
 
     #LOGGER.info(f'\n{prefix} starting export with X2Paddle {x2paddle.__version__}...')
-    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'OpenVINO Model Export has been acknowledged')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'PaddlePaddle Model Export has been acknowledged')
     f = str(file).replace('.pt', f'_paddle_model{os.sep}')
     
     try:
@@ -311,7 +311,7 @@ def export_paddle(model, im, file, metadata, prefix=colorstr('PaddlePaddle:')):
         yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting PaddlePaddle model :' + str(e))
-        return 
+        return None, None
     return f, None
 
 
@@ -341,7 +341,7 @@ def export_coreml(model, im, file, int8, half, nms, prefix=colorstr('CoreML:')):
         ct_model.save(f)
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting CoreML model :' + str(e))
-        return 
+        return None, None
     return f, ct_model
 
 
@@ -410,7 +410,7 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
             t.write(engine.serialize())
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine' +  str(e))
-        return 
+        return None, None 
     return f, None
 
 @try_export
@@ -466,7 +466,7 @@ def export_saved_model(model,
                                     tf.__version__, '2.6') else tf.saved_model.SaveOptions())
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Saved Model : " + str(e))
-        return
+        return None, None
 
     return f, keras_model
 
@@ -489,7 +489,7 @@ def export_pb(keras_model, file, prefix=colorstr('TensorFlow GraphDef:')):
         tf.io.write_graph(graph_or_graph_def=frozen_func.graph, logdir=str(f.parent), name=f.name, as_text=False)
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow GraphDef : " + str(e))
-        return
+        return None, None
     return f, None
 
 
@@ -525,7 +525,7 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
         open(f, 'wb').write(tflite_model)
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Lite : " + str(e))
-        return
+        return None, None
     return f, None
 
 
@@ -775,12 +775,6 @@ def try_upload(actiontracker,files):
                 actiontracker.upload_checkpoint(compressed_file,model_type="exported")
             except:
                 print(f"Erorr in uploading {path}")
-
-    stepCode='MDL_EXP_CMPL'
-    status='SUCCESS'
-    status_description='Model Export Completed'
-    print(status_description)
-    actiontracker.update_status(stepCode,status,status_description)
                 
 @smart_inference_mode()
 def run(
@@ -789,7 +783,6 @@ def run(
         weights=ROOT / 'model.pt',  # weights path
         imgsz=(224, 224),  # image (height, width)
         batch_size=1,  # batch size
-        device='cpu',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         include=('torchscript', 'onnx'),  # include formats
         half=False,  # FP16 half-precision export
         inplace=False,  # set YOLOv5 Detect() inplace=True
@@ -831,7 +824,7 @@ def run(
         include = actionTracker.action_details['exportFormats']
         if include[0] == "tensorrt":
             include[0] = "engine"
-        device = "0"
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     except Exception as e:
         print(f"An error occurred while processing include formats: {e}")
 
@@ -865,14 +858,16 @@ def run(
     try:
         device = select_device(device)
 
-        if half:
-            if device.type == 'cpu' or coreml:
-                raise ValueError('--half only compatible with GPU export, i.e. use --device 0')
+        if half and (device.type == 'cpu' or coreml):
+            raise ValueError('--half only compatible with GPU export, i.e. use --device 0')
         if dynamic:
             raise ValueError('--half not compatible with --dynamic, i.e. use either --half or --dynamic but not both')
         model = attempt_load(weights, device=device, inplace=True, fuse=True)  # load FP32 model
     except ValueError as e:
         print(f'Error: {e}')
+    except Exception as e:
+        print(f'Unexpected error loading model: {e}')
+        raise
 
     # Checks
     try:
@@ -880,11 +875,8 @@ def run(
     except TypeError:
         pass  # len(imgsz) == 1 else 1  # expand
 
-    try:
-        assert device.type == 'cpu', '--optimize not compatible with cuda devices, i.e. use --device cpu'
-    except AssertionError:
-        if optimize:
-            raise AssertionError('not compatible with cuda device')
+    if optimize:
+        assert device.type == "cpu", "--optimize not compatible with cuda devices, i.e. use --device cpu"
 
     # Input
     gs = int(max(model.stride))  # grid size (max stride)
