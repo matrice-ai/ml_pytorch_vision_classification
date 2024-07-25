@@ -777,30 +777,7 @@ def try_upload(actiontracker,files):
                 print(f"Erorr in uploading {path}")
                 
 @smart_inference_mode()
-def run(
-        action_id,
-        data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
-        weights=ROOT / 'model.pt',  # weights path
-        imgsz=(224, 224),  # image (height, width)
-        batch_size=1,  # batch size
-        include=('torchscript', 'onnx'),  # include formats
-        half=False,  # FP16 half-precision export
-        inplace=False,  # set YOLOv5 Detect() inplace=True
-        keras=False,  # use Keras
-        optimize=False,  # TorchScript: optimize for mobile
-        int8=False,  # CoreML/TF INT8 quantization
-        dynamic=False,  # ONNX/TF/TensorRT: dynamic axes
-        simplify=False,  # ONNX: simplify model
-        opset=12,  # ONNX: opset version
-        verbose=False,  # TensorRT: verbose log
-        workspace=4,  # TensorRT: workspace size (GB)
-        nms=False,  # TF: add NMS to model
-        agnostic_nms=False,  # TF: add agnostic NMS to model
-        topk_per_class=100,  # TF.js NMS: topk per class to keep
-        topk_all=100,  # TF.js NMS: topk for all classes to keep
-        iou_thres=0.45,  # TF.js NMS: IoU threshold
-        conf_thres=0.25,  # TF.js NMS: confidence threshold
-):
+def run(action_id):
     from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
 
     global actionTracker
@@ -813,10 +790,30 @@ def run(
     actionTracker.update_status(stepCode, status, status_description)
 
     model_config = actionTracker.get_job_params()
+    print('model_config is', model_config)
+
+    data = model_config.get("data", f'{ROOT}/ data/coco128.yaml') 
+    weights = model_config.get("weights", f'{ROOT}/model.pt')
+    imgsz = model_config.get("imgsz", (224,224))
+    batch_size = model_config.get("batch", 1)
+    half = model_config.get("half", False)
+    inplace = model_config.get("inplace", False)
+    optimize = model_config.get("optimize", False)
+    keras = model_config.get("keras", False)
+    int8 = model_config.get("int8", False)
+    dynamic = model_config.get("dynamic", False)
+    simplify = model_config.get("simplify", False)
+    verbose = model_config.get("verbose", False)
+    opset = model_config.get("opset", 12)
+    workspace = model_config.get("workspace", 4)
+    nms = model_config.get("nms", False)
+    agnostic_nms = model_config.get("agnostic_nms", False)
+    topk_per_class = model_config.get("topk_per_class", 100)
+    topk_all = model_config.get("topk_all", 100)
+    iou_thres = model_config.get("iou_thres", 100)
+    conf_thres = model_config.get("conf_thres", 100)
 
     actionTracker.download_model(weights)
-
-    print('model_config is', model_config)
 
     # include = actionTracker.action_details['exportFormats']
 
