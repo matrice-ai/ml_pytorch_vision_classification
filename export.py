@@ -866,11 +866,7 @@ def run(action_id):
         print(f'Unexpected error loading model: {e}')
         raise
 
-    # Checks
-    try:
-        imgsz *= 2
-    except TypeError:
-        pass  # len(imgsz) == 1 else 1  # expand
+    imgsz *= 2 if len(imgsz) == 1 else 1
 
     if optimize:
         assert device.type == "cpu", "--optimize not compatible with cuda devices, i.e. use --device cpu"
