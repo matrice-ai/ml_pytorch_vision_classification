@@ -878,6 +878,9 @@ def run(action_id):
     # Input
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz = [check_img_size(x, gs) for x in imgsz]  # verify img_size are gs-multiples
+    print(f"Attempting to create tensor of size: {batch_size}x3x{imgsz[0]}x{imgsz[1]}")
+    tensor_size_bytes = batch_size * 3 * imgsz[0] * imgsz[1] * 4  # 4 bytes per float32
+    print(f"Tensor size in GB: {tensor_size_bytes / (1024**3):.2f}")
     im = torch.zeros(batch_size, 3, *imgsz).to(device)  # image size(1,3,320,192) BCHW iDetection
 
     # Update model
