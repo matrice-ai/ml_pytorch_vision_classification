@@ -857,7 +857,7 @@ def run(action_id):
 
         if half and (device.type == 'cpu' or coreml):
             raise ValueError('--half only compatible with GPU export, i.e. use --device 0')
-        if dynamic:
+        if half and dynamic:
             raise ValueError('--half not compatible with --dynamic, i.e. use either --half or --dynamic but not both')
         model = attempt_load(weights, device=device, inplace=True, fuse=True)  # load FP32 model
     except ValueError as e:
