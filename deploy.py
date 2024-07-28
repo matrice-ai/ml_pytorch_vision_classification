@@ -1,7 +1,7 @@
 import sys
 import subprocess
 from matrice_sdk.deploy import MatriceDeploy
-from python_sdk.src.actionTracker import ActionTracker
+from matrice_sdk.actionTracker import ActionTracker
 
 from export_formats.openvino.predict import load_model as load_openvino, predict as predict_openvino
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
