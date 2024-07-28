@@ -14,11 +14,10 @@ from .actionTracker import ActionTracker
 
 class MatriceDeploy:
 
-    def __init__(self, session, load_model, predict ,action_id, port):
+    def __init__(self, load_model, predict ,action_id, port):
         
         self.action_id = action_id
-        self.rpc=session.rpc
-        self.actionTracker = ActionTracker(session,action_id)
+        self.actionTracker = ActionTracker(action_id)
         
         self.action_details=self.actionTracker.action_details 
         print(self.action_details)
