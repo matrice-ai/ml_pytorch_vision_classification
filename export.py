@@ -810,9 +810,10 @@ def run(action_id):
     actionTracker.update_status(stepCode, status, status_description)
 
     model_config = actionTracker.get_job_params()
+    dataset_path = model_config["dataset_path"]
     print('model_config is', model_config)
 
-    data = model_config.get("data", f'{ROOT}/workspace/data') 
+    data = f"{ROOT}/workspace/{dataset_path}/images"
     weights = model_config.get("weights", f'{ROOT}/model.pt')
     imgsz = model_config.get("imgsz", (224,224))
     batch_size = model_config.get("batch", 1)
