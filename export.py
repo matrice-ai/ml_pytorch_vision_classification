@@ -224,11 +224,14 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
 
 
 @try_export
-def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:')):
+def export_openvino(file, metadata, half, int8, data_dir, prefix=colorstr('OpenVINO:')):
     # YOLOv5 OpenVINO export
     check_requirements('openvino-dev>=2023.0')  # requires openvino-dev: https://pypi.org/project/openvino-dev/
     import openvino.runtime as ov  # noqa
     from openvino.tools import mo  # noqa
+    from torchvision import datasets, transforms
+    import torch
+    import os
 
     #LOGGER.info(f'\n{prefix} starting export with openvino {ov.__version__}...')
     actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'OpenVINO Model Export has been acknowledged')
@@ -242,7 +245,18 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
             import numpy as np
             from openvino.runtime import Core
 
-            from export_utils.utils.dataloaders import create_dataloader
+            # Define transforms for the dataset
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+
+            # Load the dataset
+            dataset = datasets.ImageFolder(data_dir, transform=transform)
+            dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
+
             core = Core()
             onnx_model = core.read_model(f_onnx)  # export
 
@@ -253,21 +267,6 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
                 if input_tensor.ndim == 3:
                     input_tensor = np.expand_dims(input_tensor, 0)
                 return input_tensor
-
-            def gen_dataloader(yaml_path, task='train', imgsz=640, workers=4):
-                data_yaml = check_yaml(yaml_path)
-                data = check_dataset(data_yaml)
-                dataloader = create_dataloader(data[task],
-                                            imgsz=imgsz,
-                                            batch_size=1,
-                                            stride=32,
-                                            pad=0.5,
-                                            single_cls=False,
-                                            rect=False,
-                                            workers=workers)[0]
-                return dataloader
-
-            # noqa: F811
 
             def transform_fn(data_item):
                 """
@@ -281,8 +280,7 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
                 input_tensor = prepare_input_tensor(img)
                 return input_tensor
 
-            ds = gen_dataloader(data)
-            quantization_dataset = nncf.Dataset(ds, transform_fn)
+            quantization_dataset = nncf.Dataset(dataloader, transform_fn)
             ov_model = nncf.quantize(onnx_model, quantization_dataset, preset=nncf.QuantizationPreset.MIXED)
         else:
             ov_model = mo.convert_model(f_onnx, model_name=file.stem, framework='onnx', compress_to_fp16=half)  # export
