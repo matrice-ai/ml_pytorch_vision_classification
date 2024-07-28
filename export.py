@@ -149,6 +149,7 @@ def export_torchscript(model, im, file, optimize, prefix=colorstr('TorchScript:'
         ts = torch.jit.trace(model, im, strict=False)
         save_func = optimize_for_mobile(ts)._save_for_lite_interpreter if optimize else ts.save
         save_func(str(f), _extra_files=extra_files)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'TorchScript model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_ACK', 'ERROR', 'Error in TorchScript model export : ' + str(e))
         sys.exit(1)
@@ -198,28 +199,28 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
         sys.exit(1) 
 
     # Metadata
-    d = {'stride': int(max(model.stride)), 'names': None}
-    for k, v in d.items():
-        meta = model_onnx.metadata_props.add()
-        meta.key, meta.value = k, str(v)
-    onnx.save(model_onnx, f)
+    try:
+        d = {'stride': int(max(model.stride)), 'names': None}
+        for k, v in d.items():
+            meta = model_onnx.metadata_props.add()
+            meta.key, meta.value = k, str(v)
+        onnx.save(model_onnx, f)
 
-    # Simplify
-    if simplify:
-        try:
-            cuda = torch.cuda.is_available()
-            check_requirements(('onnxruntime-gpu' if cuda else 'onnxruntime', 'onnx-simplifier>=0.4.1'))
-            import onnxsim
-
-            #LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
-            model_onnx, check = onnxsim.simplify(model_onnx)
-            assert check, 'assert check failed'
-            onnx.save(model_onnx, f)
-            actionTracker.update_status('MDL_EXPT_SIMPLIFY', 'OK', 'Simplifying ONNX model')
-        except Exception as e:
-            #LOGGER.info(f'{prefix} simplifier failure: {e}')
-            actionTracker.update_status('MDL_EXPT_SIMPLIFY_FAIL', 'ERROR', 'ERROR in simplifying ONNX model : ' + str(e))
-            sys.exit(1)
+        # Simplify
+        if simplify:
+                cuda = torch.cuda.is_available()
+                check_requirements(('onnxruntime-gpu' if cuda else 'onnxruntime', 'onnx-simplifier>=0.4.1'))
+                import onnxsim
+    
+                #LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
+                model_onnx, check = onnxsim.simplify(model_onnx)
+                assert check, 'assert check failed'
+                onnx.save(model_onnx, f)
+                actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'ONNX model has been exported')
+    except Exception as e:
+        #LOGGER.info(f'{prefix} simplifier failure: {e}')
+        actionTracker.update_status('MDL_EXPT_SIMPLIFY_FAIL', 'ERROR', 'ERROR in simplifying ONNX model : ' + str(e))
+        sys.exit(1)
     return f, model_onnx
 
 
@@ -287,6 +288,7 @@ def export_openvino(file, metadata, half, int8, data_dir, prefix=colorstr('OpenV
 
         ov.serialize(ov_model, f_ov)  # save
         yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'OpenVino model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting OpenVINO model :' + str(e))
         sys.exit(1)
@@ -307,6 +309,7 @@ def export_paddle(model, im, file, metadata, prefix=colorstr('PaddlePaddle:')):
     try:
         pytorch2paddle(module=model, save_dir=f, jit_type='trace', input_examples=[im])  # export
         yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Paddle Paddle model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting PaddlePaddle model :' + str(e))
         sys.exit(1)
@@ -337,6 +340,7 @@ def export_coreml(model, im, file, int8, half, nms, prefix=colorstr('CoreML:')):
             else:
                 print(f'{prefix} quantization only supported on macOS, skipping...')
         ct_model.save(f)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'CoreML model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting CoreML model :' + str(e))
         sys.exit(1)
@@ -407,6 +411,7 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
             config.set_flag(trt.BuilderFlag.FP16)
         with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
             t.write(engine.serialize())
+            actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'TensorRT model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine' +  str(e))
         sys.exit(1)
@@ -463,6 +468,7 @@ def export_saved_model(model,
                                 f,
                                 options=tf.saved_model.SaveOptions(experimental_custom_gradients=False) if check_version(
                                     tf.__version__, '2.6') else tf.saved_model.SaveOptions())
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'TensorFlow Saved Model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Saved Model : " + str(e))
         sys.exit(1)
@@ -486,6 +492,7 @@ def export_pb(keras_model, file, prefix=colorstr('TensorFlow GraphDef:')):
         frozen_func = convert_variables_to_constants_v2(m)
         frozen_func.graph.as_graph_def()
         tf.io.write_graph(graph_or_graph_def=frozen_func.graph, logdir=str(f.parent), name=f.name, as_text=False)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow GraphDef model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow GraphDef : " + str(e))
         sys.exit(1)
@@ -497,31 +504,34 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
     # YOLOv5 TensorFlow Lite export
     import tensorflow as tf
 
-    #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
-    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Graphdef Export has been acknowledged')
-    batch_size, ch, *imgsz = list(im.shape)  # BCHW
-    f = str(file).replace('.pt', '-fp16.tflite')
-
-    converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
-    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
-    converter.target_spec.supported_types = [tf.float16]
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    if int8:
-        from models.tf import representative_dataset_gen
-        dataset = LoadImages(check_dataset(check_yaml(data))['train'], img_size=imgsz, auto=False)
-        converter.representative_dataset = lambda: representative_dataset_gen(dataset, ncalib=100)
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.target_spec.supported_types = []
-        converter.inference_input_type = tf.uint8  # or tf.int8
-        converter.inference_output_type = tf.uint8  # or tf.int8
-        converter.experimental_new_quantizer = True
-        f = str(file).replace('.pt', '-int8.tflite')
-    if nms or agnostic_nms:
-        converter.target_spec.supported_ops.append(tf.lite.OpsSet.SELECT_TF_OPS)
-
     try:
+        #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+        actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Graphdef Export has been acknowledged')
+        batch_size, ch, *imgsz = list(im.shape)  # BCHW
+        f = str(file).replace('.pt', '-fp16.tflite')
+    
+        converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
+        converter.target_spec.supported_types = [tf.float16]
+        converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        if int8:
+            from models.tf import representative_dataset_gen
+            dataset = LoadImages(check_dataset(check_yaml(data))['train'], img_size=imgsz, auto=False)
+            converter.representative_dataset = lambda: representative_dataset_gen(dataset, ncalib=100)
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            converter.target_spec.supported_types = []
+            converter.inference_input_type = tf.uint8  # or tf.int8
+            converter.inference_output_type = tf.uint8  # or tf.int8
+            converter.experimental_new_quantizer = True
+            f = str(file).replace('.pt', '-int8.tflite')
+        if nms or agnostic_nms:
+            converter.target_spec.supported_ops.append(tf.lite.OpsSet.SELECT_TF_OPS)
+
+    
         tflite_model = converter.convert()
         open(f, 'wb').write(tflite_model)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow Lite model has been exported')
+    
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Lite : " + str(e))
         sys.exit(1)
@@ -557,6 +567,7 @@ def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
         f = str(file).replace('.pt', '-int8_edgetpu.tflite')  # Edge TPU model
         f_tfl = str(file).replace('.pt', '-int8.tflite')  # TFLite model
         subprocess.run(['edgetpu_compiler','-s','-d','-k','10','--out_dir',str(file.parent),f_tfl, ], check=True)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow Edge TPU model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Edge TPU : " + str(e))
         sys.exit(1)
@@ -596,6 +607,7 @@ def export_tfjs(file, int8, prefix=colorstr('TensorFlow.js:')):
                 r'"Identity_2": {"name": "Identity_2"}, '
                 r'"Identity_3": {"name": "Identity_3"}}}', json)
             j.write(subst)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow.js model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Edge TPU : " + str(e))
         sys.exit(1)
