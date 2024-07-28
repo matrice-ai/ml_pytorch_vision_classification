@@ -6,7 +6,6 @@ from matrice_sdk.actionTracker import ActionTracker
 from export_formats.openvino.predict import load_model as load_openvino, predict as predict_openvino
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
 from export_formats.onnx.predict import load_model as load_onnx, predict as predict_onnx
-from export_formats.tensorrt.predict import load_model as load_tensorrt, predict as predict_tensorrt
 from predict import load_model as load_pytorch, predict as predict_pytorch
 
 def load_model(actionTracker):
@@ -20,6 +19,7 @@ def load_model(actionTracker):
             model=load_pytorch(actionTracker)
         elif "tensorrt" in runtime_framework:
             subprocess.run(["pip", "install", "tensorrt", "pycuda"]) # Very large to add to requirements.txt
+            from export_formats.tensorrt.predict import load_model as load_tensorrt, predict as predict_tensorrt
             model=load_tensorrt(actionTracker)
         elif "openvino" in runtime_framework:
             model=load_openvino(actionTracker)
