@@ -813,7 +813,7 @@ def run(action_id):
     dataset_path = model_config["dataset_path"]
     print('model_config is', model_config)
 
-    data = f"{ROOT}/workspace/{dataset_path}/images"
+    data = f"{ROOT}/workspace/{dataset_path}/images/train"
     weights = model_config.get("weights", f'{ROOT}/model.pt')
     imgsz = model_config.get("imgsz", (224,224))
     batch_size = model_config.get("batch", 1)
