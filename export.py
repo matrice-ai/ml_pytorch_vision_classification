@@ -127,7 +127,7 @@ def try_export(inner_func):
             with Profile() as dt:
                 f, model = inner_func(*args, **kwargs)
             #LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
-            actionTracker.update_status('MDL_EXPT', 'OK', 'Model export is successful')
+            actionTracker.update_status('MDL_EXPT', 'SUCCESS', 'Model export is successful')
             return f, model
         except Exception as e:
             actionTracker.update_status('MDL_EXPT', 'ERROR', 'Error in export : ' + str(e))
