@@ -18,6 +18,7 @@ class MatriceDeploy:
         
         self.action_id = action_id
         self.actionTracker = ActionTracker(action_id)
+        self.rpc = self.actionTracker.session.rpc
         
         self.action_details=self.actionTracker.action_details 
         print(self.action_details)
