@@ -38,10 +38,9 @@ jobs:
           git clone -b $ENV https://github.com/matrice-ai/python_sdk.git ./python_sdk
           cd ./python_sdk
           git submodule update --init --recursive
-          mkdir -p ../matrice_sdk
-          mv src/matrice_sdk ../matrice_sdk
+          # mkdir -p ../matrice_sdk
+          mv src/matrice_sdk ../
           cd "$ORIGINAL_DIR"
-          rm -rf ./python_sdk
           
       - name: Login to Amazon ECR
         id: login-ecr
