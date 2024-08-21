@@ -99,7 +99,7 @@ def main(action_id):
         sys.exit(1)    
 
 
-from model_metrics import accuracy,precision,recall,f1_score_per_class,specificity,calculate_metrics_for_all_classes,specificity_all
+from model_metrics import accuracy, precision, recall, f1_score_per_class, specificity, calculate_metrics_for_all_classes, specificity_all, accuracy_per_class
 
 def get_evaluation_results(split,predictions,output,target,index_to_labels):
     
@@ -192,6 +192,14 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
             "metricValue":float(value)
          })
 
+        for name,value in accuracy_per_class(output,target).items():
+            results.append({
+            "category": index_to_labels[str(name)],
+             "splitType":split,
+             "metricName":"acc@1",
+            "metricValue":float(value)
+         })
+            
         return results
 
 
