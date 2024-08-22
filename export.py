@@ -810,6 +810,7 @@ def run(action_id):
     actionTracker.update_status(stepCode, status, status_description)
 
     model_config = actionTracker.get_job_params()
+    print('model_config------>', model_config)
     dataset_path = model_config["dataset_path"]
     print('model_config is', model_config)
 
