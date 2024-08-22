@@ -752,7 +752,7 @@ def run(
         conf_thres=0.25,  # TF.js NMS: confidence threshold
 ):
     from python_sdk.src.actionTracker import ActionTracker
-    from python_sdk.matrice import Session
+    from python_sdk.session import Session
 
     session=Session()
     actionTracker = ActionTracker(session,action_id)
