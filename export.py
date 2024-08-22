@@ -764,8 +764,6 @@ def run(
     actionTracker.update_status(stepCode,status,status_description)
 
     model_config=actionTracker.get_job_params()
-
-    print('model_config--->' ,model_config)
     
     actionTracker.download_model(weights)
     
