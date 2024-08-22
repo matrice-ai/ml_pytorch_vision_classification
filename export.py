@@ -75,7 +75,7 @@ from export_utils.utils.torch_utils import select_device, smart_inference_mode
 from ultralytics.utils.checks import check_requirements
 
 from matrice_sdk.actionTracker import ActionTracker
-from matrice_sdk.matrice import Session
+from matrice_sdk.session import Session
 
 MACOS = platform.system() == 'Darwin'  # macOS environment
 
