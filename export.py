@@ -841,7 +841,7 @@ def run(action_id):
 
     try:
         include = actionTracker.action_details['exportFormats']
-        if include[0] == "tensorrt":
+        if include[0].lower() == "tensorrt":
             include[0] = "engine"
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     except Exception as e:
