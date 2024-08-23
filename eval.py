@@ -21,7 +21,6 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
-import tensorrt as trt
 import pycuda.driver as cuda
 
 
