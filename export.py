@@ -811,10 +811,10 @@ def run(action_id):
 
     model_config = actionTracker.get_job_params()
     print('model_config------>', model_config)
-    dataset_path = model_config["dataset_path"]
+    dataset_path = model_config.get("dataset_path", "")
     print('model_config is', model_config)
 
-    data = f"workspace/{model_config['dataset_path']}/images/train"
+    data = f"workspace/{model_config.get('dataset_path', "")}/images/train"
     weights = model_config.get("weights", f'{ROOT}/model.pt')
     imgsz = model_config.get("imgsz", (224,224))
     batch_size = model_config.get("batch", 1)
