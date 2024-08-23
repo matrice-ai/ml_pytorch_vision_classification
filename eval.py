@@ -251,6 +251,7 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
 
 
 def allocate_buffers(engine):
+    import tensorrt as trt
     # Get input and output binding indices (assuming 0 and 1, but verify if there are multiple inputs/outputs)
     input_binding_index = 0
     output_binding_index = 1
