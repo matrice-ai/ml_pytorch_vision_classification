@@ -21,7 +21,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
-import pycuda.driver as cuda
+
 
 
 
@@ -252,6 +252,7 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
 
 def allocate_buffers(engine):
     import tensorrt as trt
+    import pycuda.driver as cuda
     # Get input and output binding indices (assuming 0 and 1, but verify if there are multiple inputs/outputs)
     input_binding_index = 0
     output_binding_index = 1
@@ -272,6 +273,7 @@ def allocate_buffers(engine):
 
 def do_inference(engine, context, h_input, d_input, h_output, d_output, stream):
     # Transfer input data to device
+    import pycuda.driver as cuda
     cuda.memcpy_htod_async(d_input, h_input, stream)
 
     # Run inference asynchronously
