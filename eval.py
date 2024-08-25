@@ -218,8 +218,8 @@ def get_metrics(split, data_loader, model, index_to_labels):
 
             for i, (images, target) in enumerate(loader):
                 
-                images = images.to(device)
-                target = target.to(device)
+                images = torch.tensor(images).to(device)
+                target = torch.tensor(target).to(device)
 
                 output = model(images)
                 predictions = torch.argmax(output, dim=1)
