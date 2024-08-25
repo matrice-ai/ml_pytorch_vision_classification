@@ -357,7 +357,7 @@ def load_data(model_config):
         
         test_loader = torch.utils.data.DataLoader(
             test_dataset, batch_size=model_config.batch_size, shuffle=False,
-            num_workers=4, pin_memory=True)
+            num_workers=4)
 
     return train_loader, val_loader, test_loader
 
