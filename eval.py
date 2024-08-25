@@ -206,8 +206,10 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
 
 
 def get_metrics(split, data_loader, model, index_to_labels):
-
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    
     def run_validate(split, loader):
+        
         all_outputs = []
         all_targets = []
         all_predictions=[]
@@ -215,9 +217,9 @@ def get_metrics(split, data_loader, model, index_to_labels):
             end = time.time()
 
             for i, (images, target) in enumerate(loader):
-                if torch.cuda.is_available():
-                    images = images.cuda(0, non_blocking=True)
-                    target = target.cuda(0, non_blocking=True)
+                
+                images = images.to(device)
+                target = target.to(device)
 
                 output = model(images)
                 predictions = torch.argmax(output, dim=1)
@@ -237,8 +239,7 @@ def get_metrics(split, data_loader, model, index_to_labels):
     # switch to evaluate mode
     model.eval()
     
-    if torch.cuda.is_available():
-        model= model.cuda(0)  
+    model= model.to(device)  
         
     metrics = run_validate(split, data_loader)
 
