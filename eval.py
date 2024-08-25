@@ -34,6 +34,7 @@ def main(action_id):
     # Initializing the ActionTracker
     try:
         actionTracker = ActionTracker(action_id)
+        model_config = actionTracker.get_job_params()
     except Exception as e:
         actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
         print(f"Error initializing ActionTracker: {str(e)}")
@@ -50,8 +51,8 @@ def main(action_id):
     
     # Loading Test Data   
     try:
-        actionTracker.model_config.data = f"workspace/{actionTracker.model_config['dataset_path']}/images"
-        val_loader, test_loader = load_data(actionTracker.model_config) 
+        model_config.data = f"workspace/{model_config['dataset_path']}/images"
+        val_loader, test_loader = load_data(model_config) 
         actionTracker.udpate_status('MDL_EVL_DTL', 'OK', 'Testing dataset is loaded')  
         
     except Exception as e:
@@ -63,10 +64,10 @@ def main(action_id):
     # Loading model
     try:
         actionTracker.download_model('model.pt')
-        print('model_config is' ,actionTracker.model_config)
+        print('model_config is' ,model_config)
         model = torch.load('model.pt', map_location='cpu')
-        actionTracker.model_config.batch_size=32
-        actionTracker.model_config.workers=4
+        model_config.batch_size=32
+        model_config.workers=4
         device = update_compute(model)
         criterion = nn.CrossEntropyLoss().to(device)
         actionTracker.update_status('MDL_EVL_STRT','OK','Model Evaluation has started')
@@ -82,10 +83,10 @@ def main(action_id):
         index_to_labels=actionTracker.get_index_to_category()
         payload=[]
         
-        if 'val' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'val')):
+        if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
             payload+=get_metrics('val',val_loader, model,index_to_labels)
 
-        if 'test' in actionTracker.model_config.split_types and os.path.exists(os.path.join(actionTracker.model_config.data, 'test')):
+        if 'test' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
             payload+=get_metrics('test',test_loader, model,index_to_labels)
 
         actionTracker.save_evaluation_results(payload)
