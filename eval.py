@@ -53,7 +53,7 @@ def main(action_id):
     try:
         model_config.data = f"workspace/{model_config['dataset_path']}/images"
         train_loader, val_loader, test_loader = load_data(model_config) 
-        actionTracker.udpate_status('MDL_EVL_DTL', 'OK', 'Testing dataset is loaded')  
+        actionTracker.update_status('MDL_EVL_DTL', 'OK', 'Testing dataset is loaded')  
         
     except Exception as e:
         actionTracker.update_status('MDL_EVL_ERR', 'ERROR', f'Error in loading dataset: {str(e)}')
