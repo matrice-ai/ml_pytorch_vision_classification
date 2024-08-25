@@ -308,43 +308,30 @@ def load_data(model_config):
     print("entered")
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                         std=[0.229, 0.224, 0.225])
+    try:
+        imsize = 299 if model_config.model_key.startswith('inception') else 224
+    except Exception as e:
+        # You can log the exception or print it if needed
+        print(f"An error occurred: {e}")
+        imsize = 224
 
-    if model_config.model_key.startswith('inception'):
-        train_dataset = datasets.ImageFolder(
-        traindir,
+    train_dataset = datasets.ImageFolder(
+    traindir,
+    transforms.Compose([
+        transforms.RandomResizedCrop(imsize),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+    ]))
+
+    val_dataset = datasets.ImageFolder(
+        valdir,
         transforms.Compose([
-            transforms.RandomResizedCrop(299),
-            transforms.RandomHorizontalFlip(),
+            transforms.Resize(imsize),
+            transforms.CenterCrop(imsize),
             transforms.ToTensor(),
             normalize,
         ]))
-
-        val_dataset = datasets.ImageFolder(
-            valdir,
-            transforms.Compose([
-                transforms.Resize(299),
-                transforms.CenterCrop(299),
-                transforms.ToTensor(),
-                normalize,
-            ]))
-    else:
-        train_dataset = datasets.ImageFolder(
-        traindir,
-        transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ]))
-
-        val_dataset = datasets.ImageFolder(
-            valdir,
-            transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                normalize,
-            ]))
    
     
     train_loader = torch.utils.data.DataLoader(
@@ -362,8 +349,8 @@ def load_data(model_config):
         test_dataset = datasets.ImageFolder(
             testdir,
             transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
+                transforms.Resize(imsize),
+                transforms.CenterCrop(imsize),
                 transforms.ToTensor(),
                 normalize,
             ]))
