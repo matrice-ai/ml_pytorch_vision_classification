@@ -35,6 +35,8 @@ def main(action_id):
     try:
         actionTracker = ActionTracker(action_id)
         model_config = actionTracker.get_job_params()
+        model_config.batch_size=32
+        model_config.workers=4
     except Exception as e:
         actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
         print(f"Error initializing ActionTracker: {str(e)}")
@@ -66,8 +68,6 @@ def main(action_id):
         actionTracker.download_model('model.pt')
         print('model_config is' ,model_config)
         model = torch.load('model.pt', map_location='cpu')
-        model_config.batch_size=32
-        model_config.workers=4
         device = update_compute(model)
         criterion = nn.CrossEntropyLoss().to(device)
         actionTracker.update_status('MDL_EVL_STRT','OK','Model Evaluation has started')
