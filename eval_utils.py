@@ -118,7 +118,7 @@ def get_openvino_inference_results(loader, model):
 
     return all_predictions, all_outputs, all_targets
             
-def get_torchscript_inference_results(loader, model):
+def get_pytorch_inference_results(loader, model):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     all_outputs = []
     all_targets = []
