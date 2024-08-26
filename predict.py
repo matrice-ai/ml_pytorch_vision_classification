@@ -4,7 +4,6 @@ import sys
 import torch
 from torchvision import transforms
 import numpy as np
-from python_common.services.utils import log_error
 import torch.nn.functional as F
 
 def load_model(actionTracker):
@@ -20,7 +19,7 @@ def load_model(actionTracker):
     
     except Exception as e:
         actionTracker.update_status('MDL_PRED_ERR', 'ERROR', 'Error in loading model')
-        log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_PRED_STRT: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error updating status to MDL_PRED_STRT: {str(e)}')
         print(f"Error updating status to MDL_PRED_STRT: {str(e)}")
         sys.exit(1)
 
@@ -53,4 +52,3 @@ def predict(model, image_bytes):
 
     return {"category": str(predicted_class), "confidence": confidence}
             
-
