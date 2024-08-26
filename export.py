@@ -1,4 +1,3 @@
-# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 """
 Export a YOLOv5 PyTorch model to other formats. TensorFlow exports authored by https://github.com/zldrobit
 
@@ -70,12 +69,13 @@ if platform.system() != 'Windows':
 from export_utils.models.experimental import attempt_load
 from export_utils.models.yolo import ClassificationModel, Detect, DetectionModel, SegmentationModel
 from export_utils.utils.dataloaders import LoadImages
-from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_img_size, check_requirements, check_version,
+from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_img_size, check_version,
                            check_yaml, colorstr, file_size, get_default_args, print_args, url2file, yaml_save)
 from export_utils.utils.torch_utils import select_device, smart_inference_mode
+from ultralytics.utils.checks import check_requirements
 
-from matrice_sdk.src.actionTracker import ActionTracker
-from matrice_sdk.src.matrice import Session
+from matrice_sdk.actionTracker import ActionTracker
+from matrice_sdk.session import Session
 
 MACOS = platform.system() == 'Darwin'  # macOS environment
 
@@ -122,16 +122,16 @@ def try_export(inner_func):
     inner_args = get_default_args(inner_func)
 
     def outer_func(*args, **kwargs):
-        prefix = inner_args['prefix']
+        prefix = inner_args.get('prefix', 'Unknown')
         try:
             with Profile() as dt:
                 f, model = inner_func(*args, **kwargs)
             #LOGGER.info(f'{prefix} export success ✅ {dt.t:.1f}s, saved as {f} ({file_size(f):.1f} MB)')
-            actionTracker.update_status('MDL_EXPT', 'OK', 'Model export is successful')
+            actionTracker.update_status('MDL_EXPT', 'SUCCESS', 'Model export is successful')
             return f, model
         except Exception as e:
             actionTracker.update_status('MDL_EXPT', 'ERROR', 'Error in export : ' + str(e))
-            return None, None
+            sys.exit(1)
 
     return outer_func
 
@@ -149,9 +149,10 @@ def export_torchscript(model, im, file, optimize, prefix=colorstr('TorchScript:'
         ts = torch.jit.trace(model, im, strict=False)
         save_func = optimize_for_mobile(ts)._save_for_lite_interpreter if optimize else ts.save
         save_func(str(f), _extra_files=extra_files)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'TorchScript model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_ACK', 'ERROR', 'Error in TorchScript model export : ' + str(e))
-        return None, None
+        sys.exit(1)
     return f, None
 
 
@@ -176,59 +177,62 @@ def export_onnx(model, im, file, opset, dynamic, simplify, prefix=colorstr('ONNX
 
     try:
         torch.onnx.export(
-        model.cpu() if dynamic else model,  # --dynamic only compatible with cpu
-        im.cpu() if dynamic else im,
-        f,
-        verbose=False,
-        opset_version=opset,
-        do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
-        input_names=['images'],
-        output_names=output_names,
-        dynamic_axes=dynamic or None
+            model.cpu() if dynamic else model,  # --dynamic only compatible with cpu
+            im.cpu() if dynamic else im,
+            f,
+            verbose=False,
+            opset_version=opset,
+            do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
+            input_names=['images'],
+            output_names=output_names,
+            dynamic_axes=dynamic or None
         )
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting ONNX model : ' + str(e))
-        return 
+        sys.exit(1)
     
     try:
         model_onnx = onnx.load(f)
         onnx.checker.check_model(model_onnx)
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_CHECK_FAIL', 'ERROR',  'ERROR in loading ONNX model : ' + str(e))
-        return 
+        sys.exit(1) 
 
     # Metadata
-    d = {'stride': int(max(model.stride)), 'names': None}
-    for k, v in d.items():
-        meta = model_onnx.metadata_props.add()
-        meta.key, meta.value = k, str(v)
-    onnx.save(model_onnx, f)
+    try:
+        d = {'stride': int(max(model.stride)), 'names': None}
+        for k, v in d.items():
+            meta = model_onnx.metadata_props.add()
+            meta.key, meta.value = k, str(v)
+        onnx.save(model_onnx, f)
 
-    # Simplify
-    if simplify:
-        try:
-            cuda = torch.cuda.is_available()
-            check_requirements(('onnxruntime-gpu' if cuda else 'onnxruntime', 'onnx-simplifier>=0.4.1'))
-            import onnxsim
-
-            #LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
-            model_onnx, check = onnxsim.simplify(model_onnx)
-            assert check, 'assert check failed'
-            onnx.save(model_onnx, f)
-            actionTracker.update_status('MDL_EXPT_SIMPLIFY', 'OK', 'Simplifying ONNX model')
-        except Exception as e:
-            #LOGGER.info(f'{prefix} simplifier failure: {e}')
-            actionTracker.update_status('MDL_EXPT_SIMPLIFY_FAIL', 'ERROR', 'ERROR in simplifying ONNX model : ' + str(e))
-            return
+        # Simplify
+        if simplify:
+                cuda = torch.cuda.is_available()
+                check_requirements(('onnxruntime-gpu' if cuda else 'onnxruntime', 'onnx-simplifier>=0.4.1'))
+                import onnxsim
+    
+                #LOGGER.info(f'{prefix} simplifying with onnx-simplifier {onnxsim.__version__}...')
+                model_onnx, check = onnxsim.simplify(model_onnx)
+                assert check, 'assert check failed'
+                onnx.save(model_onnx, f)
+                actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'ONNX model has been exported')
+    except Exception as e:
+        #LOGGER.info(f'{prefix} simplifier failure: {e}')
+        actionTracker.update_status('MDL_EXPT_SIMPLIFY_FAIL', 'ERROR', 'ERROR in simplifying ONNX model : ' + str(e))
+        sys.exit(1)
     return f, model_onnx
 
 
 @try_export
-def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:')):
+def export_openvino(file, metadata, half, int8, data_dir, prefix=colorstr('OpenVINO:')):
     # YOLOv5 OpenVINO export
     check_requirements('openvino-dev>=2023.0')  # requires openvino-dev: https://pypi.org/project/openvino-dev/
     import openvino.runtime as ov  # noqa
     from openvino.tools import mo  # noqa
+    from torchvision import datasets, transforms
+    import torch
+    import os
 
     #LOGGER.info(f'\n{prefix} starting export with openvino {ov.__version__}...')
     actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'OpenVINO Model Export has been acknowledged')
@@ -242,7 +246,18 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
             import numpy as np
             from openvino.runtime import Core
 
-            from export_utils.utils.dataloaders import create_dataloader
+            # Define transforms for the dataset
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+
+            # Load the dataset
+            dataset = datasets.ImageFolder(data_dir, transform=transform)
+            dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
+
             core = Core()
             onnx_model = core.read_model(f_onnx)  # export
 
@@ -253,21 +268,6 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
                 if input_tensor.ndim == 3:
                     input_tensor = np.expand_dims(input_tensor, 0)
                 return input_tensor
-
-            def gen_dataloader(yaml_path, task='train', imgsz=640, workers=4):
-                data_yaml = check_yaml(yaml_path)
-                data = check_dataset(data_yaml)
-                dataloader = create_dataloader(data[task],
-                                            imgsz=imgsz,
-                                            batch_size=1,
-                                            stride=32,
-                                            pad=0.5,
-                                            single_cls=False,
-                                            rect=False,
-                                            workers=workers)[0]
-                return dataloader
-
-            # noqa: F811
 
             def transform_fn(data_item):
                 """
@@ -281,17 +281,17 @@ def export_openvino(file, metadata, half, int8, data, prefix=colorstr('OpenVINO:
                 input_tensor = prepare_input_tensor(img)
                 return input_tensor
 
-            ds = gen_dataloader(data)
-            quantization_dataset = nncf.Dataset(ds, transform_fn)
+            quantization_dataset = nncf.Dataset(dataloader, transform_fn)
             ov_model = nncf.quantize(onnx_model, quantization_dataset, preset=nncf.QuantizationPreset.MIXED)
         else:
             ov_model = mo.convert_model(f_onnx, model_name=file.stem, framework='onnx', compress_to_fp16=half)  # export
 
         ov.serialize(ov_model, f_ov)  # save
         yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'OpenVino model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting OpenVINO model :' + str(e))
-        return
+        sys.exit(1)
     return f, None
 
 
@@ -303,15 +303,16 @@ def export_paddle(model, im, file, metadata, prefix=colorstr('PaddlePaddle:')):
     from x2paddle.convert import pytorch2paddle
 
     #LOGGER.info(f'\n{prefix} starting export with X2Paddle {x2paddle.__version__}...')
-    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'OpenVINO Model Export has been acknowledged')
+    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'PaddlePaddle Model Export has been acknowledged')
     f = str(file).replace('.pt', f'_paddle_model{os.sep}')
     
     try:
         pytorch2paddle(module=model, save_dir=f, jit_type='trace', input_examples=[im])  # export
         yaml_save(Path(f) / file.with_suffix('.yaml').name, metadata)  # add metadata.yaml
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Paddle Paddle model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting PaddlePaddle model :' + str(e))
-        return 
+        sys.exit(1)
     return f, None
 
 
@@ -339,9 +340,10 @@ def export_coreml(model, im, file, int8, half, nms, prefix=colorstr('CoreML:')):
             else:
                 print(f'{prefix} quantization only supported on macOS, skipping...')
         ct_model.save(f)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'CoreML model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting CoreML model :' + str(e))
-        return 
+        sys.exit(1)
     return f, ct_model
 
 
@@ -370,6 +372,7 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
         assert onnx.exists(), f'failed to export ONNX file: {onnx}'
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting to ONNX model :' + str(e))
+        sys.exit(1)
 
     actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorRT Model Export has been acknowledged')
     f = file.with_suffix('.engine')  # TensorRT engine file
@@ -408,9 +411,10 @@ def export_engine(model, im, file, half, dynamic, simplify, workspace=4, verbose
             config.set_flag(trt.BuilderFlag.FP16)
         with builder.build_engine(network, config) as engine, open(f, 'wb') as t:
             t.write(engine.serialize())
+            actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'TensorRT model has been exported')
     except Exception as e:
-        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine + ' str(e))
-        return 
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', 'ERROR in exporting TensorRT engine' +  str(e))
+        sys.exit(1)
     return f, None
 
 @try_export
@@ -464,9 +468,10 @@ def export_saved_model(model,
                                 f,
                                 options=tf.saved_model.SaveOptions(experimental_custom_gradients=False) if check_version(
                                     tf.__version__, '2.6') else tf.saved_model.SaveOptions())
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'TensorFlow Saved Model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Saved Model : " + str(e))
-        return
+        sys.exit(1)
 
     return f, keras_model
 
@@ -487,9 +492,10 @@ def export_pb(keras_model, file, prefix=colorstr('TensorFlow GraphDef:')):
         frozen_func = convert_variables_to_constants_v2(m)
         frozen_func.graph.as_graph_def()
         tf.io.write_graph(graph_or_graph_def=frozen_func.graph, logdir=str(f.parent), name=f.name, as_text=False)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow GraphDef model has been exported')
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow GraphDef : " + str(e))
-        return
+        sys.exit(1)
     return f, None
 
 
@@ -498,38 +504,41 @@ def export_tflite(keras_model, im, file, int8, data, nms, agnostic_nms, prefix=c
     # YOLOv5 TensorFlow Lite export
     import tensorflow as tf
 
-    #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
-    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Graphdef Export has been acknowledged')
-    batch_size, ch, *imgsz = list(im.shape)  # BCHW
-    f = str(file).replace('.pt', '-fp16.tflite')
-
-    converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
-    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
-    converter.target_spec.supported_types = [tf.float16]
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    if int8:
-        from models.tf import representative_dataset_gen
-        dataset = LoadImages(check_dataset(check_yaml(data))['train'], img_size=imgsz, auto=False)
-        converter.representative_dataset = lambda: representative_dataset_gen(dataset, ncalib=100)
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        converter.target_spec.supported_types = []
-        converter.inference_input_type = tf.uint8  # or tf.int8
-        converter.inference_output_type = tf.uint8  # or tf.int8
-        converter.experimental_new_quantizer = True
-        f = str(file).replace('.pt', '-int8.tflite')
-    if nms or agnostic_nms:
-        converter.target_spec.supported_ops.append(tf.lite.OpsSet.SELECT_TF_OPS)
-
     try:
+        #LOGGER.info(f'\n{prefix} starting export with tensorflow {tf.__version__}...')
+        actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'TensorFlow Graphdef Export has been acknowledged')
+        batch_size, ch, *imgsz = list(im.shape)  # BCHW
+        f = str(file).replace('.pt', '-fp16.tflite')
+    
+        converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS]
+        converter.target_spec.supported_types = [tf.float16]
+        converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        if int8:
+            from models.tf import representative_dataset_gen
+            dataset = LoadImages(check_dataset(check_yaml(data))['train'], img_size=imgsz, auto=False)
+            converter.representative_dataset = lambda: representative_dataset_gen(dataset, ncalib=100)
+            converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+            converter.target_spec.supported_types = []
+            converter.inference_input_type = tf.uint8  # or tf.int8
+            converter.inference_output_type = tf.uint8  # or tf.int8
+            converter.experimental_new_quantizer = True
+            f = str(file).replace('.pt', '-int8.tflite')
+        if nms or agnostic_nms:
+            converter.target_spec.supported_ops.append(tf.lite.OpsSet.SELECT_TF_OPS)
+
+    
         tflite_model = converter.convert()
         open(f, 'wb').write(tflite_model)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow Lite model has been exported')
+    
     except Exception as e:
         actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Lite : " + str(e))
-        return
+        sys.exit(1)
     return f, None
 
 
-@@try_export
+@try_export
 def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
     # YOLOv5 Edge TPU export https://coral.ai/docs/edgetpu/models-intro/
     cmd = 'edgetpu_compiler --version'
@@ -537,8 +546,8 @@ def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
     assert platform.system() == 'Linux', f'export only supported on Linux. See {help_url}'
     try: #check if edge tpu compiler is installed 
         if subprocess.run(f'{cmd} > /dev/null 2>&1', shell=True).returncode != 0:
-            raise EnviormatError('Edge TPU compiler not found')
-    except EnviormentError:
+            raise EnvironmentError('Edge TPU compiler not found')
+    except EnvironmentError:
 
         #LOGGER.info(f'\n{prefix} export requires Edge TPU compiler. Attempting install from {help_url}')
         actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'Edge TPU Model Export has been acknowledged')
@@ -548,49 +557,60 @@ def export_edgetpu(file, prefix=colorstr('Edge TPU:')):
                 'echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list',
                 'sudo apt-get update', 'sudo apt-get install edgetpu-compiler'):
             subprocess.run(c if sudo else c.replace('sudo ', ''), shell=True, check=True)
-    #get edge tpu compiler version        
-    ver = subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split()[-1]
 
-    #LOGGER.info(f'\n{prefix} starting export with Edge TPU compiler {ver}...')
-    actionTracker.update_status('MDL_EXPT_ACK', 'ERROR', 'Error in Edge TPU model export : ' + str(e))
-    f = str(file).replace('.pt', '-int8_edgetpu.tflite')  # Edge TPU model
-    f_tfl = str(file).replace('.pt', '-int8.tflite')  # TFLite model
-    subprocess.run(['edgetpu_compiler','-s','-d','-k','10','--out_dir',str(file.parent),f_tfl, ], check=True)
+    try : 
+        #get edge tpu compiler version        
+        ver = subprocess.run(cmd, shell=True, capture_output=True, check=True).stdout.decode().split()[-1]
+    
+        #LOGGER.info(f'\n{prefix} starting export with Edge TPU compiler {ver}...')
+        actionTracker.update_status('MDL_EXPT_ACK', 'ERROR', 'Error in Edge TPU model export : ' + str(e))
+        f = str(file).replace('.pt', '-int8_edgetpu.tflite')  # Edge TPU model
+        f_tfl = str(file).replace('.pt', '-int8.tflite')  # TFLite model
+        subprocess.run(['edgetpu_compiler','-s','-d','-k','10','--out_dir',str(file.parent),f_tfl, ], check=True)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow Edge TPU model has been exported')
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Edge TPU : " + str(e))
+        sys.exit(1)
     return f, None
 
 
 @try_export
 def export_tfjs(file, int8, prefix=colorstr('TensorFlow.js:')):
-    # YOLOv5 TensorFlow.js export
-    check_requirements('tensorflowjs')
-    import tensorflowjs as tfjs
-
-    #LOGGER.info(f'\n{prefix} starting export with tensorflowjs {tfjs.__version__}...'
-    actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'Error in TensorFlow.js model has been acknowledged :' + str(e))
-    f= str(file).replace('.pt', '_web_model')  # js dir
-    f_pb = file.with_suffix('.pb')  # *.pb path
-    f_json = f'{f}/model.json'  # *.json path
-
-    args = [
-        'tensorflowjs_converter',
-        '--input_format=tf_frozen_model',
-        '--quantize_uint8'if int8 else '',
-        '--output_node_names=Identity,Identity_1,Identity_2,Identity_3',
-        str(f_pb),
-        str(f), ]
-    subprocess.run([arg for arg in args if arg], check=True)
-
-    json = Path(f_json).read_text()
-    with open(f_json, 'w') as j:  # sort JSON Identity_* in ascending order
-        subst = re.sub(
-            r'{"outputs": {"Identity.?.?": {"name": "Identity.?.?"}, '
-            r'"Identity.?.?": {"name": "Identity.?.?"}, '
-            r'"Identity.?.?": {"name": "Identity.?.?"}, '
-            r'"Identity.?.?": {"name": "Identity.?.?"}}}', r'{"outputs": {"Identity": {"name": "Identity"}, '
-            r'"Identity_1": {"name": "Identity_1"}, '
-            r'"Identity_2": {"name": "Identity_2"}, '
-            r'"Identity_3": {"name": "Identity_3"}}}', json)
-        j.write(subst)
+    try:
+        # YOLOv5 TensorFlow.js export
+        check_requirements('tensorflowjs')
+        import tensorflowjs as tfjs
+    
+        #LOGGER.info(f'\n{prefix} starting export with tensorflowjs {tfjs.__version__}...'
+        actionTracker.update_status('MDL_EXPT_ACK', 'OK', 'Error in TensorFlow.js model has been acknowledged :' + str(e))
+        f= str(file).replace('.pt', '_web_model')  # js dir
+        f_pb = file.with_suffix('.pb')  # *.pb path
+        f_json = f'{f}/model.json'  # *.json path
+    
+        args = [
+            'tensorflowjs_converter',
+            '--input_format=tf_frozen_model',
+            '--quantize_uint8'if int8 else '',
+            '--output_node_names=Identity,Identity_1,Identity_2,Identity_3',
+            str(f_pb),
+            str(f), ]
+        subprocess.run([arg for arg in args if arg], check=True)
+    
+        json = Path(f_json).read_text()
+        with open(f_json, 'w') as j:  # sort JSON Identity_* in ascending order
+            subst = re.sub(
+                r'{"outputs": {"Identity.?.?": {"name": "Identity.?.?"}, '
+                r'"Identity.?.?": {"name": "Identity.?.?"}, '
+                r'"Identity.?.?": {"name": "Identity.?.?"}, '
+                r'"Identity.?.?": {"name": "Identity.?.?"}}}', r'{"outputs": {"Identity": {"name": "Identity"}, '
+                r'"Identity_1": {"name": "Identity_1"}, '
+                r'"Identity_2": {"name": "Identity_2"}, '
+                r'"Identity_3": {"name": "Identity_3"}}}', json)
+            j.write(subst)
+        actionTracker.update_status('MDL_EXPT_ACK', 'SUCCESS', 'Tensorflow.js model has been exported')
+    except Exception as e:
+        actionTracker.update_status('MDL_EXPT_EXPORT_FAIL', 'ERROR', "ERROR in exporting TensorFlow Edge TPU : " + str(e))
+        sys.exit(1)
     return f, None
 
 
@@ -775,118 +795,115 @@ def try_upload(actiontracker,files):
                 actiontracker.upload_checkpoint(compressed_file,model_type="exported")
             except:
                 print(f"Erorr in uploading {path}")
-
-    stepCode='MDL_EXP_CMPL'
-    status='SUCCESS'
-    status_description='Model Export Completed'
-    print(status_description)
-    actiontracker.update_status(stepCode,status,status_description)
                 
 @smart_inference_mode()
-def run(
-        action_id,
-        data=ROOT / 'data/coco128.yaml',  # 'dataset.yaml path'
-        weights=ROOT / 'model.pt',  # weights path
-        imgsz=(224,224),  # image (height, width)
-        batch_size=1,  # batch size
-        device='cpu',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
-        include=('torchscript', 'onnx'),  # include formats
-        half=False,  # FP16 half-precision export
-        inplace=False,  # set YOLOv5 Detect() inplace=True
-        keras=False,  # use Keras
-        optimize=False,  # TorchScript: optimize for mobile
-        int8=False,  # CoreML/TF INT8 quantization
-        dynamic=False,  # ONNX/TF/TensorRT: dynamic axes
-        simplify=False,  # ONNX: simplify model
-        opset=12,  # ONNX: opset version
-        verbose=False,  # TensorRT: verbose log
-        workspace=4,  # TensorRT: workspace size (GB)
-        nms=False,  # TF: add NMS to model
-        agnostic_nms=False,  # TF: add agnostic NMS to model
-        topk_per_class=100,  # TF.js NMS: topk per class to keep
-        topk_all=100,  # TF.js NMS: topk for all classes to keep
-        iou_thres=0.45,  # TF.js NMS: IoU threshold
-        conf_thres=0.25,  # TF.js NMS: confidence threshold
-):
-    from python_sdk.src.actionTracker import ActionTracker
-    from python_sdk.matrice import Session
+def run(action_id):
+    from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
 
-    session=Session()
-    actionTracker = ActionTracker(session,action_id)
+    global actionTracker
+    actionTracker = ActionTracker(action_id)
 
-    stepCode='MDL_EXP_ACK'
-    status='OK'
-    status_description='Model Export Acknowledged'
+    stepCode = 'MDL_EXP_ACK'
+    status = 'OK'
+    status_description = 'Model Export Acknowledged'
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(stepCode, status, status_description)
 
-    model_config=actionTracker.get_job_params()
-    
+    model_config = actionTracker.get_job_params()
+    print('model_config------>', model_config)
+    dataset_path = model_config.get("dataset_path", "")
+    print('model_config is', model_config)
+
+    data = f"workspace/{model_config.get('dataset_path', '')}/images/train"
+    weights = model_config.get("weights", f'{ROOT}/model.pt')
+    imgsz = model_config.get("imgsz", (224,224))
+    batch_size = model_config.get("batch", 1)
+    half = model_config.get("half", False)
+    inplace = model_config.get("inplace", False)
+    optimize = model_config.get("optimize", False)
+    keras = model_config.get("keras", False)
+    int8 = model_config.get("int8", False)
+    dynamic = model_config.get("dynamic", False)
+    simplify = model_config.get("simplify", False)
+    verbose = model_config.get("verbose", False)
+    opset = model_config.get("opset", 12)
+    workspace = model_config.get("workspace", 4)
+    nms = model_config.get("nms", False)
+    agnostic_nms = model_config.get("agnostic_nms", False)
+    topk_per_class = model_config.get("topk_per_class", 100)
+    topk_all = model_config.get("topk_all", 100)
+    iou_thres = model_config.get("iou_thres", 100)
+    conf_thres = model_config.get("conf_thres", 100)
+
     actionTracker.download_model(weights)
-    
-    print('model_config is' ,model_config)
 
-    #include=actionTracker.action_details['exportFormats']
+    # include = actionTracker.action_details['exportFormats']
 
     try:
-        include=actionTracker.action_details['exportFormats']
-        if include[0]=="tensorrt":
-         include[0]="engine"
-        device="0"
-    except Exception as e :
-        print(f"An error occured while processing include formats:{e}")
+        include = actionTracker.action_details['exportFormats']
+        if include[0].lower() == "tensorrt":
+            include[0] = "engine"
+        device = "0" if include[0].lower() == "engine" else "cpu"
+        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+          
+    except Exception as e:
+        print(f"An error occurred while processing include formats: {e}")
+        sys.exit(1)
 
     t = time.time()
     include = [x.lower() for x in include]  # to lowercase
 
-try:
-    fmts = tuple(export_formats()['Argument'][1:])  # --include arguments
-    flags = [x in include for x in fmts]
-    assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}'
-    jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle = flags  # export booleans
-except AssertonError as e:
-    print(e)
-    raise
-except Exception as e:
-    print(f"An unexcepted error occured:{e}")
-    raise 
-try:
-    file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
-except Exception as e :
-    print(f"An unexpected error occured:{e}")
+    try:
+        fmts = tuple(export_formats()['Argument'][1:])  # --include arguments
+        flags = [x in include for x in fmts]
+        assert sum(flags) == len(include), f'ERROR: Invalid --include {include}, valid --include arguments are {fmts}'
+        jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle = flags  # export booleans
+    except AssertionError as e:
+        print(e)
+        sys.exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
 
-    stepCode='MDL_EXP_STR'
-    status='OK'
-    status_description='Model Export Started'
+    try:
+        file = Path(url2file(weights) if str(weights).startswith(('http:/', 'https:/')) else weights)  # PyTorch weights
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+    stepCode = 'MDL_EXP_STR'
+    status = 'OK'
+    status_description = 'Model Export Started'
     print(status_description)
-    actionTracker.update_status(stepCode,status,status_description)
+    actionTracker.update_status(stepCode, status, status_description)
 
-# Load PyTorch model
-try:
+    # Load PyTorch model
+    try:
+        device = select_device(device)
 
-    device = select_device(device)
-
-    if half:
-        if device.type == 'cpu' or coreml:
-            raise ValueError ('--half only compatible with GPU export, i.e. use --device 0')
-    if dynamic:
+        if half and (device.type == 'cpu' or coreml):
+            raise ValueError('--half only compatible with GPU export, i.e. use --device 0')
+        if half and dynamic:
             raise ValueError('--half not compatible with --dynamic, i.e. use either --half or --dynamic but not both')
-    model = attempt_load(weights, device=device, inplace=True, fuse=True)  # load FP32 model
-except ValueError as e:
-    print(f'Error:{e}')
-    # Checks
-try:
-    imgsz *= 2 
-except TypeError:
-    pass #len(imgsz) == 1 else 1  # expand
-try:
-        assert device.type == 'cpu', '--optimize not compatible with cuda devices, i.e. use --device cpu'
-except AssertionError:
+        model = attempt_load(weights, device=device, inplace=True, fuse=True)  # load FP32 model
+    except ValueError as e:
+        print(f'Error: {e}')
+        sys.exit(1)
+    except Exception as e:
+        print(f'Unexpected error loading model: {e}')
+        sys.exit(1)
+
+    imgsz *= 2 if len(imgsz) == 1 else 1
+
     if optimize:
-       raise AssertionError('not compatible with cude device')
+        assert device.type == "cpu", "--optimize not compatible with cuda devices, i.e. use --device cpu"
+
     # Input
     gs = int(max(model.stride))  # grid size (max stride)
     imgsz = [check_img_size(x, gs) for x in imgsz]  # verify img_size are gs-multiples
+    print(f"Attempting to create tensor of size: {batch_size}x3x{imgsz[0]}x{imgsz[1]}")
+    tensor_size_bytes = batch_size * 3 * imgsz[0] * imgsz[1] * 4  # 4 bytes per float32
+    print(f"Tensor size in GB: {tensor_size_bytes / (1024**3):.2f}")
     im = torch.zeros(batch_size, 3, *imgsz).to(device)  # image size(1,3,320,192) BCHW iDetection
 
     # Update model
@@ -908,71 +925,80 @@ except AssertionError:
     # Exports
     f = [''] * len(fmts)  # exported filenames
     warnings.filterwarnings(action='ignore', category=torch.jit.TracerWarning)  # suppress TracerWarning
+
     try:
         if jit:  # TorchScript
-           f[0], _ = export_torchscript(model, im, file, optimize)
-    except exception as e:
-        print(f"Torchscrpt export failed:{e}")
+            f[0], _ = export_torchscript(model, im, file, optimize)
+    except Exception as e:
+        print(f"TorchScript export failed: {e}")
+        sys.exit(1)
+
     try:
         if engine:  # TensorRT required before ONNX
             f[1], _ = export_engine(model, im, file, half, dynamic, simplify, workspace, verbose)
     except Exception as e:
-        print(f"TensoRT export failed:{e}")
-    
-    try:
+        print(f"TensorRT export failed: {e}")
+        sys.exit(1)
 
+    try:
         if onnx or xml:  # OpenVINO requires ONNX
-           f[2], _ = export_onnx(model, im, file, opset, dynamic, simplify)
+            f[2], _ = export_onnx(model, im, file, opset, dynamic, simplify)
     except Exception as e:
-        print(f"ONNX export failed:{e}")
+        print(f"ONNX export failed: {e}")
+        sys.exit(1)
+
     try:
         if xml:  # OpenVINO
-           f[3], _ = export_openvino(file, metadata, half, int8, data)
+            f[3], _ = export_openvino(file, metadata, half, int8, data)
     except Exception as e:
-        print(f"OpenVINO export failed:{e}")
+        print(f"OpenVINO export failed: {e}")
 
     try:
         if coreml:  # CoreML
-           f[4], ct_model = export_coreml(model, im, file, int8, half, nms)
-        if nms:
-            pipeline_coreml(ct_model, im, file, None, y)
+            f[4], ct_model = export_coreml(model, im, file, int8, half, nms)
+            if nms:
+                pipeline_coreml(ct_model, im, file, None, y)
     except Exception as e:
-        print(f"CoreML export failed:{e}")
+        print(f"CoreML export failed: {e}")
+        sys.exit(1)
 
-try:
+    try:
         if any((saved_model, pb, tflite, edgetpu, tfjs)):  # TensorFlow formats
-           assert not tflite or not tfjs, 'TFLite and TF.js models must be exported separately, please pass only one type.'
-           assert not isinstance(model, ClassificationModel), 'ClassificationModel export to TF formats not yet supported.'
-        f[5], s_model = export_saved_model(model.cpu(),
-                                           im,
-                                           file,
-                                           dynamic,
-                                           tf_nms=nms or agnostic_nms or tfjs,
-                                           agnostic_nms=agnostic_nms or tfjs,
-                                           topk_per_class=topk_per_class,
-                                           topk_all=topk_all,
-                                           iou_thres=iou_thres,
-                                           conf_thres=conf_thres,
-                                           keras=keras)
-        if pb or tfjs:  # pb prerequisite to tfjs
-            f[6], _ = export_pb(s_model, file)
-        if tflite or edgetpu:
-            f[7], _ = export_tflite(s_model, im, file, int8 or edgetpu, data=data, nms=nms, agnostic_nms=agnostic_nms)
-            if edgetpu:
-                f[8], _ = export_edgetpu(file)
-            add_tflite_metadata(f[8] or f[7], metadata, num_outputs=len(s_model.outputs))
-        if tfjs:
-            f[9], _ = export_tfjs(file, int8)
-except Exception as ae:
-    print(f"TensorFlow format assertion failed:{ae}")
+            assert not tflite or not tfjs, 'TFLite and TF.js models must be exported separately, please pass only one type.'
+            assert not isinstance(model, ClassificationModel), 'ClassificationModel export to TF formats not yet supported.'
+            f[5], s_model = export_saved_model(model.cpu(),
+                                               im,
+                                               file,
+                                               dynamic,
+                                               tf_nms=nms or agnostic_nms or tfjs,
+                                               agnostic_nms=agnostic_nms or tfjs,
+                                               topk_per_class=topk_per_class,
+                                               topk_all=topk_all,
+                                               iou_thres=iou_thres,
+                                               conf_thres=conf_thres,
+                                               keras=keras)
+            if pb or tfjs:  # pb prerequisite to tfjs
+                f[6], _ = export_pb(s_model, file)
+            if tflite or edgetpu:
+                f[7], _ = export_tflite(s_model, im, file, int8 or edgetpu, data=data, nms=nms, agnostic_nms=agnostic_nms)
+                if edgetpu:
+                    f[8], _ = export_edgetpu(file)
+                add_tflite_metadata(f[8] or f[7], metadata, num_outputs=len(s_model.outputs))
+            if tfjs:
+                f[9], _ = export_tfjs(file, int8)
+    except Exception as ae:
+        print(f"TensorFlow format assertion failed: {ae}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"TensorFlow formats export failed: {e}")
+        sys.exit(1)
 
-except Exception as e:
-    print(f"TensorFlow formats export failed :{e}")
-try:
-    if paddle:  # PaddlePaddle
-           f[10], _ = export_paddle(model, im, file, metadata)
-except Exception as e:
-    print(f"PaddlePaddle export failed:{e}")
+    try:
+        if paddle:  # PaddlePaddle
+            f[10], _ = export_paddle(model, im, file, metadata)
+    except Exception as e:
+        print(f"PaddlePaddle export failed: {e}")
+        sys.exit(1)
 
     # Finish
     f = [str(x) for x in f if x]  # filter out '' and None
@@ -990,8 +1016,9 @@ except Exception as e:
                     f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{f[-1]}')  {s}"
                     f'\nVisualize:       https://netron.app')
 
-    try_upload(actionTracker,f)
-                #return f  # return list of exported files/dirs
+    try_upload(actionTracker, f)
+    # return f  # return list of exported files/dirs
+
 
 
 if __name__ == "__main__":
