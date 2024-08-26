@@ -35,7 +35,7 @@ def main(action_id):
     try:
         actionTracker = ActionTracker(action_id)
         model_config = actionTracker.get_job_params()
-        model_config.batch_size=32
+        model_config.batch_size=1
         model_config.workers=4
     except Exception as e:
         actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
