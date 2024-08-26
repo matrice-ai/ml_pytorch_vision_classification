@@ -78,7 +78,8 @@ def main(action_id):
 
     # Evaluating on test dataset
     try:
-        index_to_labels=actionTracker.get_index_to_category()
+        is_exported = "pytorch" not in runtime_framework.lower()
+        index_to_labels=actionTracker.get_index_to_category(is_exported = is_exported)
         payload=[]
         
         if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
