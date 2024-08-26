@@ -23,7 +23,7 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
 
 import zipfile
-from openvino.inference_engine import IECore
+import openvino.runtime as ov
 import time
 import onnx
 import onnxruntime
@@ -38,10 +38,12 @@ def load_eval_model(actionTracker, runtime_framework = "pytorch"):
         with zipfile.ZipFile("model_openvino.zip", 'r') as zip_ref:
             zip_ref.extractall("/model_openvino")
         model_xml_path="/model_openvino/model.xml"
-        ie = IECore()
-        device_name = 'GPU' if 'GPU' in ie.available_devices else 'CPU'
-        net = ie.read_network(model=model_xml_path)
-        model = ie.load_network(network=net, device_name=device_name)
+        core = ov.Core()
+        device_name = 'GPU' if 'GPU' in core.available_devices else 'CPU'
+        model = core.read_model(model=model_xml_path)
+        compiled_model  = core.compile_model(model=model, device_name=device_name)
+        output_layer = compiled_model.output(0)
+        model = (compiled_model, output_layer)
     elif "torchscript" in runtime_framework:
         actionTracker.download_model("model.torchscript",model_type="exported")
         model = torch.jit.load('model.torchscript', map_location='cpu')
@@ -89,6 +91,9 @@ def get_onnx_inference_results(loader, model):
     return all_predictions, all_outputs, all_targets
 
 def get_openvino_inference_results(loader, model):
+    compiled_model = model[0]
+    output_layer = model[1]
+    
     all_outputs = []
     all_targets = []
     all_predictions = []
@@ -96,16 +101,9 @@ def get_openvino_inference_results(loader, model):
     end = time.time()
 
     for i, (images, target) in enumerate(loader):
-        input_blob = next(iter(model.input_info))
-        images = images.transpose(2, 3).transpose(1, 2) # Change data layout to NCHW
-        images= np.transpose(images, (0, 2, 1, 3))
-        images = np.ascontiguousarray(images)
-
-        # Perform inference
-        res = model.infer(inputs={input_blob: images})
-
-        # Process output
-        output = res[next(iter(res))]
+        results = compiled_model(images.numpy())
+        
+        output = torch.tensor(results[output_layer])
         predictions = np.argmax(output, axis=1)
 
         all_predictions.append(torch.tensor(predictions))
@@ -117,7 +115,7 @@ def get_openvino_inference_results(loader, model):
     all_targets = torch.cat(all_targets, dim=0)
 
     return all_predictions, all_outputs, all_targets
-            
+    
 def get_pytorch_inference_results(loader, model):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     all_outputs = []
@@ -142,7 +140,37 @@ def get_pytorch_inference_results(loader, model):
         all_targets = torch.cat(all_targets, dim=0)
 
         return all_predictions, all_outputs, all_targets
+        
+# def get_openvino_inference_results(loader, model): using IECore deprecated
+#     all_outputs = []
+#     all_targets = []
+#     all_predictions = []
 
+#     end = time.time()
+
+#     for i, (images, target) in enumerate(loader):
+#         input_blob = next(iter(model.input_info))
+#         images = images.transpose(2, 3).transpose(1, 2) # Change data layout to NCHW
+#         images= np.transpose(images, (0, 2, 1, 3))
+#         images = np.ascontiguousarray(images)
+
+#         # Perform inference
+#         res = model.infer(inputs={input_blob: images})
+
+#         # Process output
+#         output = res[next(iter(res))]
+#         predictions = np.argmax(output, axis=1)
+
+#         all_predictions.append(torch.tensor(predictions))
+#         all_outputs.append(torch.tensor(output))
+#         all_targets.append(target)
+
+#     all_predictions = torch.cat(all_predictions, dim=0)
+#     all_outputs = torch.cat(all_outputs, dim=0)
+#     all_targets = torch.cat(all_targets, dim=0)
+
+#     return all_predictions, all_outputs, all_targets
+    
 # def allocate_buffers(engine):
 #     # Determine dimensions and create page-locked memory buffers (i.e., pinned memory)
 #     h_input = cuda.pagelocked_empty(trt.volume(engine.get_binding_shape(0)), dtype=np.float32)
