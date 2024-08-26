@@ -82,10 +82,10 @@ def main(action_id):
         payload=[]
         
         if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
-            payload+=get_metrics('val',val_loader, model,index_to_labels)
+            payload+=get_metrics('val',val_loader, model,index_to_labels, runtime_framework)
 
         if 'test' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'test')):
-            payload+=get_metrics('test',test_loader, model,index_to_labels)
+            payload+=get_metrics('test',test_loader, model,index_to_labels, runtime_framework)
 
         actionTracker.save_evaluation_results(payload)
         actionTracker.update_status('MDL_EVL_CMPL','SUCCESS','Model Evaluation is completed')
