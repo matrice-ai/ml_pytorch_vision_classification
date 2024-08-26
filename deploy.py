@@ -1,7 +1,7 @@
 import sys
 import subprocess
 from matrice_sdk.deploy import MatriceDeploy
-from python_sdk.src.actionTracker import ActionTracker
+from matrice_sdk.actionTracker import ActionTracker
 
 from export_formats.openvino.predict import load_model as load_openvino, predict as predict_openvino
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
@@ -58,28 +58,30 @@ def predict(model_data,image_bytes):
     return predictions
 
 
-def main(action_id):
+def main(action_id, port):
+    global actionTracker
     #Getting the actionTracker
     try:
         actionTracker = ActionTracker(action_id)
     except Exception as e:
-        log_error(__file__, 'ML_YOLOV8/main', f'Error initializing ActionTracker: {str(e)}')
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error Initializing Action Tracker: {str(e)}')
         print(f"Error initializing ActionTracker: {str(e)}")
         sys.exit(1)
 
     #Deploying the model
     
     try:
-        x = actionTracker.Matrice_Deploy(load_model, predict, action_id)
+        #load_model, predict ,action_id, port
+        x = MatriceDeploy(load_model, predict, action_id, port)
         x.start_server()
         actionTracker.update_status('MDL_DPY_ACK', 'OK', 'Model Deployment has been acknowledged')
     except Exception as e:
         actionTracker.update_status('MDL_DPY_ERR', 'ERROR', 'Error in model deployment : ' + str(e))
         sys.exit(1)
-        return
+    return
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 deploy.py <action_status_id>")
+    if len(sys.argv) != 3:
+        print("Usage: python3 deploy.py <action_status_id> <port>")
         sys.exit(1)
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])
