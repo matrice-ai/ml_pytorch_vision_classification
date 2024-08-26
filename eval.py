@@ -26,7 +26,7 @@ from torch.utils.data import Subset
 
 from matrice_sdk.actionTracker import ActionTracker
 from train import load_data, update_compute
-
+from eval_utils import load_eval_model, get_pytorch_inference_results, get_onnx_inference_results, get_openvino_inference_results
 
 
 def main(action_id):
@@ -65,11 +65,9 @@ def main(action_id):
     
     # Loading model
     try:
-        actionTracker.download_model('model.pt')
         print('model_config is' ,model_config)
-        model = torch.load('model.pt', map_location='cpu')
-        device = update_compute(model)
-        criterion = nn.CrossEntropyLoss().to(device)
+        runtime_framework=actionTracker.action_details.get('runtimeFramework', 'pytorch').lower()
+        model = load_eval_model(actionTracker, runtime_framework)
         actionTracker.update_status('MDL_EVL_STRT','OK','Model Evaluation has started')
         
     except Exception as e:
@@ -203,47 +201,55 @@ def get_evaluation_results(split,predictions,output,target,index_to_labels):
             
         return results
 
+def get_metrics(split, data_loader, model, index_to_labels, runtime_framework = "pytorch"):
 
+    print(f"runtime framework : {runtime_framework}")
 
-def get_metrics(split, data_loader, model, index_to_labels):
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    
-    def run_validate(split, loader):
-        
-        all_outputs = []
-        all_targets = []
-        all_predictions=[]
-        with torch.no_grad():
-            end = time.time()
+    if "onnx" in runtime_framework:
+        get_inference_results = get_onnx_inference_results
+    elif "torchscript" in runtime_framework:
+        get_inference_results = get_pytorch_inference_results
+    elif "pytorch" in runtime_framework:
+        get_inference_results = get_pytorch_inference_results
+    # elif "tensorrt" in runtime_framework:
+    #     get_inference_results = get_tensorrt_inference_results
+    elif "openvino" in runtime_framework:
+        get_inference_results = get_openvino_inference_results
+    else:
+        get_inference_results = get_pytorch_inference_results
 
-            for i, (images, target) in enumerate(loader):
-                
-                images = images.to(device)
-                target = target.to(device)
+    all_predictions, all_outputs, all_targets = get_inference_results(data_loader, model)
 
-                output = model(images)
-                predictions = torch.argmax(output, dim=1)
-
-                all_predictions.append(predictions)
-                all_outputs.append(output)
-                all_targets.append(target)
-
-            all_predictions= torch.cat(all_predictions, dim=0)
-            all_outputs = torch.cat(all_outputs, dim=0)
-            all_targets = torch.cat(all_targets, dim=0)
-
-            metrics = get_evaluation_results(split,all_predictions, all_outputs, all_targets, index_to_labels)
-
-            return metrics
-
-    # switch to evaluate mode
-    model.eval()
-    
-    model= model.to(device)  
-        
-    metrics = run_validate(split, data_loader)
+    metrics = get_evaluation_results(split,all_predictions, all_outputs, all_targets, index_to_labels)
 
     return metrics
+    
+# def get_metrics(split, data_loader, model, index_to_labels):
+#     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+#     def run_validate(split, loader): 
+#         all_outputs = []
+#         all_targets = []
+#         all_predictions=[]
+#         with torch.no_grad():
+#             end = time.time()
+#             for i, (images, target) in enumerate(loader):
+#                 images = images.to(device)
+#                 target = target.to(device)
+#                 output = model(images)
+#                 predictions = torch.argmax(output, dim=1)
+#                 all_predictions.append(predictions)
+#                 all_outputs.append(output)
+#                 all_targets.append(target)
+#             all_predictions= torch.cat(all_predictions, dim=0)
+#             all_outputs = torch.cat(all_outputs, dim=0)
+#             all_targets = torch.cat(all_targets, dim=0)
+#             metrics = get_evaluation_results(split,all_predictions, all_outputs, all_targets, index_to_labels)
+#             return metrics
+#     # switch to evaluate mode
+#     model.eval()
+#     model= model.to(device)  
+#     metrics = run_validate(split, data_loader)
+#     return metrics
 
 
 if __name__ == "__main__":
