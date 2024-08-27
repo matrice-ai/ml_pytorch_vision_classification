@@ -28,7 +28,41 @@ import time
 import onnx
 import onnxruntime
 
+def allocate_buffers(engine):
+    # Determine dimensions and create page-locked memory buffers (i.e., pinned memory)
+    h_input = cuda.pagelocked_empty(trt.volume(engine.get_tensor_shape("images")), dtype=np.float32)
+    h_output = cuda.pagelocked_empty(trt.volume(engine.get_tensor_shape("output")), dtype=np.float32)
+    d_input = cuda.mem_alloc(h_input.nbytes)
+    d_output = cuda.mem_alloc(h_output.nbytes)
+    stream = cuda.Stream()
 
+    return h_input, d_input, h_output, d_output, stream
+
+def do_inference(engine, context, h_input, d_input, h_output, d_output, stream):
+    # Transfer input data to device
+    cuda.memcpy_htod_async(d_input, h_input, stream)
+    # Run inference
+    context.execute_v2(bindings=[int(d_input), int(d_output)])
+    # Transfer predictions back from device
+    cuda.memcpy_dtoh_async(h_output, d_output, stream)
+    # Synchronize the stream
+    stream.synchronize()
+
+    return h_output
+
+def load_engine(trt_filename):
+    # Deserialize the engine from file
+    with open(trt_filename, 'rb') as f:
+        engine_data = f.read()
+        print(engine_data)
+    runtime = trt.Runtime(trt.Logger(trt.Logger.WARNING))
+    engine = runtime.deserialize_cuda_engine(engine_data)
+    if not engine:
+      print(f"Failed to load the engine: {engine}")
+    context = engine.create_execution_context()
+    return (engine, context)
+
+    
 def load_eval_model(actionTracker, runtime_framework = "pytorch"):
     if "onnx" in runtime_framework:
         actionTracker.download_model("model.onnx",model_type="exported")
@@ -56,32 +90,53 @@ def load_eval_model(actionTracker, runtime_framework = "pytorch"):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
         model.eval()
-        
-    # elif framework=='TensorRT':
-    #     actionTracker.download_model("model.engine",model_type="exported")
-    #     import tensorrt as trt
-    #     import pycuda.driver as cuda
-    #     import pycuda.autoinit
-    #     model = load_engine("model.engine")
+    elif framework=='TensorRT':
+        actionTracker.download_model("model.engine",model_type="exported")
+        setup_tensorrt()
+        model = load_engine("model.engine")
     
     return model
 
+def get_tensorrt_inference_results(loader, model):
+    engine = model[0]
+    context = model[1]
+    h_input, d_input, h_output, d_output, stream = allocate_buffers(engine)
+
+    all_outputs = []
+    all_targets = []
+    all_predictions = []
+
+    for i, (images, target) in enumerate(loader):
+        images = images.numpy().astype(np.float32)
+        h_input = np.ravel(images)
+
+        # Run inference and get predictions
+        output = do_inference(engine, context, h_input, d_input, h_output, d_output, stream)
+
+        predictions = np.argmax(output)
+        all_predictions.append(predictions)
+        all_outputs.append(output)
+        all_targets.append(target)
+
+    all_predictions = torch.tensor(all_predictions)
+    all_outputs = torch.tensor(all_outputs)
+    all_targets = torch.tensor(all_targets)
+
+    return all_predictions, all_outputs, all_targets
+    
 def get_onnx_inference_results(loader, model):
     all_outputs = []
     all_targets = []
     all_predictions = []
 
-    end = time.time()
-
     for i, (images, target) in enumerate(loader):
         
         input_data = {"images": images.numpy()}  # Assuming the input name is 'input'
-
         output = model.run(None, input_data)
         predictions = torch.argmax(torch.tensor(output[0]), dim=1)
 
         all_predictions.append(predictions)
-        all_outputs.append(torch.tensor(output[0]))  # Convert to PyTorch tensor
+        all_outputs.append(torch.tensor(output[0]))
         all_targets.append(target)
 
     all_predictions = torch.cat(all_predictions, dim=0)
@@ -97,8 +152,6 @@ def get_openvino_inference_results(loader, model):
     all_outputs = []
     all_targets = []
     all_predictions = []
-
-    end = time.time()
 
     for i, (images, target) in enumerate(loader):
         results = compiled_model(images.numpy())
@@ -141,96 +194,3 @@ def get_pytorch_inference_results(loader, model):
 
         return all_predictions, all_outputs, all_targets
         
-# def get_openvino_inference_results(loader, model): using IECore deprecated
-#     all_outputs = []
-#     all_targets = []
-#     all_predictions = []
-
-#     end = time.time()
-
-#     for i, (images, target) in enumerate(loader):
-#         input_blob = next(iter(model.input_info))
-#         images = images.transpose(2, 3).transpose(1, 2) # Change data layout to NCHW
-#         images= np.transpose(images, (0, 2, 1, 3))
-#         images = np.ascontiguousarray(images)
-
-#         # Perform inference
-#         res = model.infer(inputs={input_blob: images})
-
-#         # Process output
-#         output = res[next(iter(res))]
-#         predictions = np.argmax(output, axis=1)
-
-#         all_predictions.append(torch.tensor(predictions))
-#         all_outputs.append(torch.tensor(output))
-#         all_targets.append(target)
-
-#     all_predictions = torch.cat(all_predictions, dim=0)
-#     all_outputs = torch.cat(all_outputs, dim=0)
-#     all_targets = torch.cat(all_targets, dim=0)
-
-#     return all_predictions, all_outputs, all_targets
-    
-# def allocate_buffers(engine):
-#     # Determine dimensions and create page-locked memory buffers (i.e., pinned memory)
-#     h_input = cuda.pagelocked_empty(trt.volume(engine.get_binding_shape(0)), dtype=np.float32)
-#     h_output = cuda.pagelocked_empty(trt.volume(engine.get_binding_shape(1)), dtype=np.float32)
-#     d_input = cuda.mem_alloc(h_input.nbytes)
-#     d_output = cuda.mem_alloc(h_output.nbytes)
-#     stream = cuda.Stream()
-
-#     return h_input, d_input, h_output, d_output, stream
-
-
-# def do_inference(engine, context, h_input, d_input, h_output, d_output, stream):
-#     # Transfer input data to device
-#     cuda.memcpy_htod_async(d_input, h_input, stream)
-
-#     # Run inference
-#     context.execute_async(bindings=[int(d_input), int(d_output)], stream_handle=stream.handle)
-
-#     # Transfer predictions back from device
-#     cuda.memcpy_dtoh_async(h_output, d_output, stream)
-
-#     # Synchronize the stream
-#     stream.synchronize()
-
-#     return h_output
-
-
-# def load_engine(trt_filename):
-#     # Deserialize the engine from file
-#     with open(trt_filename, 'rb') as f:
-#         engine_data = f.read()
-#     runtime = trt.Runtime(trt.Logger(trt.Logger.WARNING))
-#     engine = runtime.deserialize_cuda_engine(engine_data)
-#     print("Engine:", engine)
-#     return engine
-
-# def get_tensorrt_inference_results(loader, model):
-#     context = engine.create_execution_context()
-#     h_input, d_input, h_output, d_output, stream = allocate_buffers(engine)
-
-#     all_outputs = []
-#     all_targets = []
-#     all_predictions = []
-
-#     end = time.time()
-
-#     for i, (images, target) in enumerate(loader):
-#         images = images.numpy().astype(np.float32)  # Assuming your images are in the correct format
-#         h_input = np.ravel(images)
-
-#         # Run inference and get predictions
-#         output = do_inference(engine, context, h_input, d_input, h_output, d_output, stream)
-
-#         predictions = np.argmax(output)
-#         all_predictions.append(predictions)
-#         all_outputs.append(output)
-#         all_targets.append(target)
-
-#     all_predictions = torch.tensor(all_predictions)
-#     all_outputs = torch.tensor(all_outputs)
-#     all_targets = torch.tensor(all_targets)
-
-#     return all_predictions, all_outputs, all_targets
