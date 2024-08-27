@@ -35,7 +35,7 @@ def main(action_id):
     try:
         actionTracker = ActionTracker(action_id)
         model_config = actionTracker.get_job_params()
-        model_config.batch_size=32
+        model_config.batch_size=1
         model_config.workers=4
     except Exception as e:
         actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error initializing ActionTracker: {str(e)}')
@@ -78,7 +78,8 @@ def main(action_id):
 
     # Evaluating on test dataset
     try:
-        index_to_labels=actionTracker.get_index_to_category()
+        is_exported = "pytorch" not in runtime_framework.lower()
+        index_to_labels=actionTracker.get_index_to_category(is_exported = is_exported)
         payload=[]
         
         if 'val' in model_config.split_types and os.path.exists(os.path.join(model_config.data, 'val')):
