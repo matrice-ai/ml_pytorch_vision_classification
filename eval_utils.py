@@ -172,9 +172,23 @@ def get_openvino_inference_results(loader, model):
     all_targets = torch.cat(all_targets, dim=0)
 
     return all_predictions, all_outputs, all_targets
+
+def validate_device(loaded_model):
+  try:
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      loaded_model = loaded_model.to(device)
+      fake_image = torch.randn(1, 3, 224, 224).to(device)
+      with torch.no_grad():
+          output = loaded_model(fake_image)
+  except Exception as e:
+      print(f"Error in loading torchscript on {device}: {e}")
+      print("Will selcet CPU device instead.")
+      device = torch.device("cpu")
+      loaded_model = loaded_model.to(device)
+  return loaded_model, device
     
 def get_pytorch_inference_results(loader, model):
-    device = next(model.parameters()).device
+    model, device = validate_device(model)
     all_outputs = []
     all_targets = []
     all_predictions=[]
