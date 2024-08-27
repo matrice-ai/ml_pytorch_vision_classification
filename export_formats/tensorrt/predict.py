@@ -26,7 +26,7 @@ def load_model(actionTracker):
 
 def predict(model, image_bytes):
 
-    engine, context=model[0],model[1]
+    engine, context = model[0] ,model[1]
     # Convert image bytes to PIL Image
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
 
@@ -39,19 +39,19 @@ def predict(model, image_bytes):
     input_tensor = transform(image).unsqueeze(0)  # Add batch dimension
 
     # Allocate GPU memory for input and output buffers
-    input_size = trt.volume(context.get_binding_shape(0))
-    output_size = trt.volume(context.get_binding_shape(1))
-
+    input_size = trt.volume(engine.get_tensor_shape("images"))
+    output_size = trt.volume(engine.get_tensor_shape("output"))
+    
     input_buffer = cuda.pagelocked_empty(input_size, dtype=np.float32)
     output_buffer = cuda.pagelocked_empty(output_size, dtype=np.float32)
-
+    
     # Copy input data to GPU
     np.copyto(input_buffer, input_tensor.numpy().ravel())
     cuda.memcpy_htod(cuda.mem_alloc(input_buffer.nbytes), input_buffer)
-
+    
     # Run inference
-    context.execute(1, [cuda.mem_alloc(input_buffer.nbytes), cuda.mem_alloc(output_buffer.nbytes)])
-
+    context.execute_v2(bindings=[cuda.mem_alloc(input_buffer.nbytes), cuda.mem_alloc(output_buffer.nbytes)])
+    
     # Copy output data from GPU
     cuda.memcpy_dtoh(output_buffer, cuda.mem_alloc(output_buffer.nbytes))
 
@@ -59,6 +59,5 @@ def predict(model, image_bytes):
     probabilities = F.softmax(torch.from_numpy(output_buffer).to("cpu"), dim=0)
     predicted_class = torch.argmax(probabilities).item()
     confidence = round(probabilities[predicted_class].item(), 2)
-
 
     return {"category": str(predicted_class), "confidence": confidence}
