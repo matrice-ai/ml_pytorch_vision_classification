@@ -41,3 +41,4 @@ onnxruntime
 openvino
 pycocotools
 bson
+ultralytics
