@@ -26,7 +26,7 @@ from torch.utils.data import Subset
 
 from matrice_sdk.actionTracker import ActionTracker
 from train import load_data, update_compute
-from eval_utils import load_eval_model, get_pytorch_inference_results, get_onnx_inference_results, get_openvino_inference_results
+from eval_utils import load_eval_model, get_pytorch_inference_results, get_onnx_inference_results, get_openvino_inference_results, get_tensorrt_inference_results
 
 
 def main(action_id):
@@ -212,8 +212,8 @@ def get_metrics(split, data_loader, model, index_to_labels, runtime_framework = 
         get_inference_results = get_pytorch_inference_results
     elif "pytorch" in runtime_framework:
         get_inference_results = get_pytorch_inference_results
-    # elif "tensorrt" in runtime_framework:
-    #     get_inference_results = get_tensorrt_inference_results
+    elif "tensorrt" in runtime_framework:
+        get_inference_results = get_tensorrt_inference_results
     elif "openvino" in runtime_framework:
         get_inference_results = get_openvino_inference_results
     else:
