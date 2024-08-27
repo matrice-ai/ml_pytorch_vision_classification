@@ -7,6 +7,7 @@ from export_formats.openvino.predict import load_model as load_openvino, predict
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
 from export_formats.onnx.predict import load_model as load_onnx, predict as predict_onnx
 from predict import load_model as load_pytorch, predict as predict_pytorch
+from eval_utils import setup_tensorrt
 
 def load_model(actionTracker):
     runtime_framework=actionTracker.action_details['runtimeFramework'].lower()
@@ -18,7 +19,7 @@ def load_model(actionTracker):
         elif "pytorch" in runtime_framework:
             model=load_pytorch(actionTracker)
         elif "tensorrt" in runtime_framework:
-            subprocess.run(["pip", "install", "tensorrt", "pycuda"]) # Very large to add to requirements.txt
+            setup_tensorrt()
             from export_formats.tensorrt.predict import load_model as load_tensorrt, predict as predict_tensorrt
             model=load_tensorrt(actionTracker)
         elif "openvino" in runtime_framework:
