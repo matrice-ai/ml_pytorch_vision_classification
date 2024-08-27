@@ -18,15 +18,9 @@ def load_model(actionTracker):
 
     model_xml_path="/model_openvino/model.xml"
     core = ov.Core()
-    device = widgets.Dropdown(
-        options=core.available_devices + ["AUTO"],
-        value='AUTO',
-        description='Device:',
-        disabled=False,
-    )
-
+    device_name = 'GPU' if 'GPU' in core.available_devices else 'CPU'
     model = core.read_model(model=model_xml_path)
-    compiled_model = core.compile_model(model=model, device_name=device.value)
+    compiled_model = core.compile_model(model=model, device_name=device_name)
     output_layer = compiled_model.output(0)
     return (compiled_model, output_layer)
 
