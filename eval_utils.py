@@ -27,7 +27,11 @@ import openvino.runtime as ov
 import time
 import onnx
 import onnxruntime
+from ultralytics.utils.checks import check_requirements
 
+def setup_tensorrt():
+    check_requirements("tensorrt", "pycuda")
+    
 def allocate_buffers(engine):
     # Determine dimensions and create page-locked memory buffers (i.e., pinned memory)
     h_input = cuda.pagelocked_empty(trt.volume(engine.get_tensor_shape("images")), dtype=np.float32)
