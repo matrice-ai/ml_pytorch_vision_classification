@@ -30,16 +30,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.ORG_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      # TODO: comment this temporary solution for matrice_sdk cloning
-      # - name: Git clone matrice_sdk
+      # TODO: comment this temporary solution for matrice cloning
+      # - name: Git clone matrice
       #   run: |
       #     ORIGINAL_DIR=$(pwd)
       #     git config --global url.https://$GH_ACCESS_USER:$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
       #     git clone -b $ENV https://github.com/matrice-ai/python_sdk.git ./python_sdk
       #     cd ./python_sdk
       #     git submodule update --init --recursive
-      #     # mkdir -p ../matrice_sdk
-      #     mv src/matrice_sdk ../
+      #     # mkdir -p ../matrice
+      #     mv src/matrice ../
       #     cd "$ORIGINAL_DIR"
           
       - name: Login to Amazon ECR
