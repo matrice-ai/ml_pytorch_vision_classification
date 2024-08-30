@@ -1,0 +1,38 @@
+{
+    "_idModelFamily": "",
+    "actionType": "deploy_model",
+    "actionConfig": [
+        {
+            "keyName": "Test",
+            "valueType": "bool",
+            "defaultValue": "Test",
+            "predefinedValues": [
+                "Test"
+            ],
+            "anyValue": false,
+            "hyperparameter": true,
+            "minValue": 0,
+            "maxValue": 0,
+            "modelKeys": [
+                "Test"
+            ]
+        }
+    ],
+    "dockerImage": "285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-ml-assisted-annotation:latest",
+    "isPrivateDocker": true,
+    "dockerInformation": {
+        "accessKey": "",
+        "secretKey": "",
+        "region": ""
+    },
+    "dockerContainerForAction": {
+        "dockerContainer": "285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-ml-assisted-annotation:latest",
+        "isGpuRequired": true,
+        "cpuType": ""
+    },
+    "dockerContainerForEvaluation": {
+        "dockerContainer": "285699223019.dkr.ecr.us-west-2.amazonaws.com/dev-ml-assisted-annotation:latest",
+        "isGpuRequired": true,
+        "cpuType": ""
+    }
+}

@@ -37,6 +37,26 @@ def calculate_metrics(output, target):
                 true_negatives[class_label] += 1
 
     return true_positives, true_negatives, false_positives, false_negatives
+    
+def accuracy_per_class(output, target):
+    # Calculate TP, TN, FP, FN
+    tp, tn, fp, fn = calculate_metrics(output, target)
+
+    # Calculate accuracy for each class
+    accuracy_per_class = {}
+    for class_label in range(output.size(1)):
+        tp_class = tp[class_label].item()
+        tn_class = tn[class_label].item()
+        fp_class = fp[class_label].item()
+        fn_class = fn[class_label].item()
+        if tp_class + tn_class + fp_class + fn_class == 0:
+            accuracy = 0.0
+        else:
+            accuracy = (tp_class + tn_class) / (tp_class + tn_class + fp_class + fn_class)
+        accuracy_per_class[class_label] = accuracy
+    
+    # Returns a dictionary where keys are class labels and values are the accuracy scores for each class.
+    return accuracy_per_class
 
 def specificity_all(output, target):
     # Calculate TN and FP for all classes

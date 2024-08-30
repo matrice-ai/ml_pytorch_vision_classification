@@ -1,0 +1,44 @@
+{
+    "modelKey": "yolov8n",
+    "modelName": "YOLOv8 Nano",
+    "_idModelFamily": "",
+    "paramsMillions": 3.2,
+    "recommendedRuntime": [
+        "ONNX",
+        "TensorRT"
+    ],
+    "benchmarkResults": [
+        {
+            "benchmarkDataset": "MSCOCO",
+            "metric": "mAP",
+            "value": 37.3
+        }
+    ],
+    "runtimeResults": [
+        {
+            "runtime": "ONNX",
+            "latency": 80.4,
+            "throughput": 324.71,
+            "batchSize": 1,
+            "computeInstance": "AWS EC2 P4d",
+            "computeType": "CPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "A100",
+            "numGPU": 1
+        },
+        {
+            "runtime": "TensorRT",
+            "latency": 0.99,
+            "batchSize": 1,
+            "computeInstance": "AWS EC2 P4d",
+            "computeType": "GPU",
+            "CPUType": "null",
+            "numCPUCores": -1,
+            "memory": -1,
+            "GPUType": "A100",
+            "numGPU": 1
+        }
+    ]
+}

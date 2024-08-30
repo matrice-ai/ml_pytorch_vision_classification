@@ -1,8 +1,7 @@
 import sys
 import subprocess
-from python_sdk.src.deploy import MatriceDeploy
-from python_sdk.src.actionTracker import ActionTracker
-from python_sdk.matrice import Session
+from matrice_sdk.deploy import MatriceDeploy
+from matrice_sdk.actionTracker import ActionTracker
 
 from export_formats.openvino.predict import load_model as load_openvino, predict as predict_openvino
 from export_formats.torchscript.predict import load_model as load_torchscript, predict as predict_torchscript
@@ -26,8 +25,10 @@ def load_model(actionTracker):
             model=load_openvino(actionTracker)
         print(runtime_framework)
     except Exception as e:
-        print(f"ERROR: {e}")
         model=load_pytorch(actionTracker)
+        print(f"ERROR: {e}")
+        actionTracker.update_status('MDL_LOAD_ERR', 'ERROR', f'Error in model loading: {str(e)}')
+        sys.exit(1)
     model_data={
         "framework": runtime_framework,
         "model": model
@@ -49,18 +50,38 @@ def predict(model_data,image_bytes):
             predictions=predict_tensorrt(model,image_bytes)
         elif "openvino" in runtime_framework:
             predictions=predict_openvino(model,image_bytes)
+            
     except Exception as e:
-        print(f"ERROR: {e}")
+        actionTracker.update_status('MDL_PREDICT', 'ERROR', f'Error during prediction: {str(e)}')
         predictions=predict_pytorch(model,image_bytes) # To make pytorch prediction not effected even new update make errors
+        sys.exit(1)
     return predictions
+
+
+def main(action_id, port):
+    global actionTracker
+    #Getting the actionTracker
+    try:
+        actionTracker = ActionTracker(action_id)
+    except Exception as e:
+        actionTracker.log_error(__file__, 'ml_pytorch_vision_classification/main', f'Error Initializing Action Tracker: {str(e)}')
+        print(f"Error initializing ActionTracker: {str(e)}")
+        sys.exit(1)
+
+    #Deploying the model
+    
+    try:
+        #load_model, predict ,action_id, port
+        x = MatriceDeploy(load_model, predict, action_id, port)
+        x.start_server()
+        actionTracker.update_status('MDL_DPY_ACK', 'OK', 'Model Deployment has been acknowledged')
+    except Exception as e:
+        actionTracker.update_status('MDL_DPY_ERR', 'ERROR', 'Error in model deployment : ' + str(e))
+        sys.exit(1)
+    return
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python3 deploy.py <action_status_id> <port>")
         sys.exit(1)
-    
-    action_status_id = sys.argv[1]
-    port=sys.argv[2]
-    session=Session()
-    x=MatriceDeploy(session,load_model, predict ,action_status_id,port)
-    x.start_server()
+    main(sys.argv[1], sys.argv[2])
