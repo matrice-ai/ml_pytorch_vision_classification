@@ -21,8 +21,8 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset
-from  matrice_sdk import rpc
-from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
+from  matrice import rpc
+from matrice.actionTracker import ActionTracker, LocalActionTracker
 import traceback
 
 

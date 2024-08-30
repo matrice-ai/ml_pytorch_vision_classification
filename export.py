@@ -74,8 +74,8 @@ from export_utils.utils.general import (LOGGER, Profile, check_dataset, check_im
 from export_utils.utils.torch_utils import select_device, smart_inference_mode
 from ultralytics.utils.checks import check_requirements
 
-from matrice_sdk.actionTracker import ActionTracker
-from matrice_sdk.session import Session
+from matrice.actionTracker import ActionTracker
+from matrice.session import Session
 
 MACOS = platform.system() == 'Darwin'  # macOS environment
 
@@ -798,7 +798,7 @@ def try_upload(actiontracker,files):
                 
 @smart_inference_mode()
 def run(action_id):
-    from matrice_sdk.actionTracker import ActionTracker, LocalActionTracker
+    from matrice.actionTracker import ActionTracker, LocalActionTracker
 
     global actionTracker
     actionTracker = ActionTracker(action_id)
