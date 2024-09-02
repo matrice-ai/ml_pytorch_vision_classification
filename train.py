@@ -363,35 +363,45 @@ def load_data(model_config):
 
 
 def initialize_model(model_config, dataset):
-    print("=> using pre-trained model '{}'".format(model_config.model_key))
-    
-    # Get the model function or class
-    model_func = models.__dict__[model_config.model_key]
-    
-    # Check if it's a callable (function or class)
-    if callable(model_func):
-        if model_config.model_key == 'googlenet':
-            model = model_func(pretrained=model_config.pretrained, aux_logits=False)
-        elif model_config.model_key.startswith('inception'):
-            model = model_func(pretrained=model_config.pretrained, aux_logits=False)    
-        else:
-            model = model_func(pretrained=model_config.pretrained)
-    else:
-        # If it's a module, we need to get the generating function
-        model = getattr(model_func, model_config.model_key)(pretrained=model_config.pretrained)
+    print("=> initializing model '{}'".format(model_config.model_key))
     
     try:
-        # Load checkpoint if available
-        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
-        if checkpoint_found:
+        # Get the model function or class
+        model_func = models.__dict__[model_config.model_key]
+        
+        # Get checkpoint path and pretrained status
+        checkpoint_path, pretrained , checkpoint_type = actionTracker.get_checkpoint_path(model_config)
+
+        # Initialize the model from scratch
+        if callable(model_func):
+            if model_config.model_key == 'googlenet' or model_config.model_key.startswith('inception'):
+                model = model_func(pretrained=False, aux_logits=False)
+            else:
+                model = model_func(pretrained=False)
+        else:
+            # If it's a module, we need to get the generating function
+            model = getattr(model_func, model_config.model_key)(pretrained=False)
+
+        # Load weights based on the conditions
+        if checkpoint_path and checkpoint_type == 'model_id':
             print("Loading checkpoint from:", checkpoint_path)
             checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(checkpoint['state_dict'])
             print("Model loaded from checkpoint:", checkpoint_path)
+        elif pretrained and checkpoint_type == 'predefined':
+            print("Loading pre-trained weights")
+            if callable(model_func):
+                if model_config.model_key == 'googlenet' or model_config.model_key.startswith('inception'):
+                    model = model_func(pretrained=True, aux_logits=False)
+                else:
+                    model = model_func(pretrained=True)
+            else:
+                model = getattr(model_func, model_config.model_key)(pretrained=True)
         else:
-            print("No checkpoint found. Using pre-trained or newly initialized weights.")
+            print("Initializing model from scratch")
+            # The model is already initialized from scratch, so we don't need to do anything here
 
-        # Modify the final layer
+        # Modify the final layer (keep this part unchanged)
         if model_config.model_key.startswith('squeezenet'):
             # SqueezeNet-specific modification
             model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
@@ -419,9 +429,10 @@ def initialize_model(model_config, dataset):
             else:
                 raise AttributeError("Model structure not recognized")
 
-        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Initial Model has been loaded')
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
         
         print(model)
+    
         
     except Exception as e:
         print(f"Error in loading model: {str(e)}")
