@@ -8,7 +8,7 @@ COPY . .
 
 RUN apt-get update \
     && apt-get install -y ffmpeg libsm6 libxext6 \
-    && python3 -m pip install --upgrade --index-url https://test.pypi.org/simple/ --no-deps matrice_sdk \
+    && python3 -m pip install --upgrade --index-url https://test.pypi.org/simple/ --no-deps matrice \
     && pip install  -r requirements.txt
 
 
