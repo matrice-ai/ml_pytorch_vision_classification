@@ -383,7 +383,7 @@ def initialize_model(model_config, dataset):
             model = getattr(model_func, model_config.model_key)(pretrained=False)
 
         # Load weights based on the conditions
-        if checkpoint_path and checkpoint_type == 'model_id':
+        if checkpoint_path is not None and checkpoint_type == 'model_id':
             print("Loading checkpoint from:", checkpoint_path)
             checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(checkpoint['state_dict'])
