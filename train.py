@@ -370,7 +370,7 @@ def initialize_model(model_config, dataset):
         model_func = models.__dict__[model_config.model_key]
         
         # Get checkpoint path and pretrained status
-        checkpoint_path, pretrained , checkpoint_type = actionTracker.get_checkpoint_path(model_config)
+        checkpoint_path, pretrained  = actionTracker.get_checkpoint_path(model_config)
 
         # Initialize the model from scratch
         if callable(model_func):
@@ -383,22 +383,23 @@ def initialize_model(model_config, dataset):
             model = getattr(model_func, model_config.model_key)(pretrained=False)
 
         # Load weights based on the conditions
-        if checkpoint_path is not None and checkpoint_type == 'model_id':
+        if checkpoint_path:
             print("Loading checkpoint from:", checkpoint_path)
-            checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint['state_dict'])
+            model = torch.load(checkpoint_path)
+            # model.load_state_dict(checkpoint['state_dict'])
             print("Model loaded from checkpoint:", checkpoint_path)
-        elif pretrained and checkpoint_type == 'predefined':
-            print("Loading pre-trained weights")
-            if callable(model_func):
-                if model_config.model_key == 'googlenet' or model_config.model_key.startswith('inception'):
-                    model = model_func(pretrained=True, aux_logits=False)
-                else:
-                    model = model_func(pretrained=True)
-            else:
-                model = getattr(model_func, model_config.model_key)(pretrained=True)
         else:
-            print("Initializing model from scratch")
+            if pretrained:
+                print("Loading pre-trained weights")
+                if callable(model_func):
+                    if model_config.model_key == 'googlenet' or model_config.model_key.startswith('inception'):
+                        model = model_func(pretrained=True, aux_logits=False)
+                    else:
+                        model = model_func(pretrained=True)
+                else:
+                    model = getattr(model_func, model_config.model_key)(pretrained=True)
+            else:
+                print("Initializing model from scratch")
             # The model is already initialized from scratch, so we don't need to do anything here
 
         # Modify the final layer (keep this part unchanged)
