@@ -402,33 +402,33 @@ def initialize_model(model_config, dataset):
                 print("Initializing model from scratch")
             # The model is already initialized from scratch, so we don't need to do anything here
 
-        # Modify the final layer (keep this part unchanged)
-        if model_config.model_key.startswith('squeezenet'):
-            # SqueezeNet-specific modification
-            model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
-            model.num_classes = len(dataset.classes)
-        elif hasattr(model, 'fc'):
-            num_ftrs = model.fc.in_features
-            model.fc = nn.Linear(num_ftrs, len(dataset.classes))
-        elif hasattr(model, 'classifier'):
-            if isinstance(model.classifier, nn.Linear):
-                # For models like DenseNet where classifier is a single Linear layer
-                num_ftrs = model.classifier.in_features
-                model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
-            elif isinstance(model.classifier, nn.Sequential):
-                # For models where classifier is a Sequential module
-                num_ftrs = model.classifier[-1].in_features
-                model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+            # Modify the final layer (keep this part unchanged)
+            if model_config.model_key.startswith('squeezenet'):
+                # SqueezeNet-specific modification
+                model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
+                model.num_classes = len(dataset.classes)
+            elif hasattr(model, 'fc'):
+                num_ftrs = model.fc.in_features
+                model.fc = nn.Linear(num_ftrs, len(dataset.classes))
+            elif hasattr(model, 'classifier'):
+                if isinstance(model.classifier, nn.Linear):
+                    # For models like DenseNet where classifier is a single Linear layer
+                    num_ftrs = model.classifier.in_features
+                    model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
+                elif isinstance(model.classifier, nn.Sequential):
+                    # For models where classifier is a Sequential module
+                    num_ftrs = model.classifier[-1].in_features
+                    model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+                else:
+                    raise AttributeError("Unexpected classifier structure")
             else:
-                raise AttributeError("Unexpected classifier structure")
-        else:
-            # For models with non-standard final layer structures
-            if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
-                # This structure is common in some ResNet variants
-                num_ftrs = model.last_linear.in_features
-                model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
-            else:
-                raise AttributeError("Model structure not recognized")
+                # For models with non-standard final layer structures
+                if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
+                    # This structure is common in some ResNet variants
+                    num_ftrs = model.last_linear.in_features
+                    model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
+                else:
+                    raise AttributeError("Model structure not recognized")
 
         actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
         
