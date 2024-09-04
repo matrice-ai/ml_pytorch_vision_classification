@@ -94,8 +94,8 @@ def load_eval_model(actionTracker, runtime_framework = "pytorch"):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = model.to(device)
         model.eval()
-    elif framework=='TensorRT':
-        actionTracker.download_model("model.engine",model_type="exported")
+    elif "tensorrt" in runtime_framework:
+        actionTracker.download_model("model.engine", model_type="exported")
         setup_tensorrt()
         model = load_engine("model.engine")
     
