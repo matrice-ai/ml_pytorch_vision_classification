@@ -363,65 +363,77 @@ def load_data(model_config):
 
 
 def initialize_model(model_config, dataset):
-    print("=> using pre-trained model '{}'".format(model_config.model_key))
-    
-    # Get the model function or class
-    model_func = models.__dict__[model_config.model_key]
-    
-    # Check if it's a callable (function or class)
-    if callable(model_func):
-        if model_config.model_key == 'googlenet':
-            model = model_func(pretrained=model_config.pretrained, aux_logits=False)
-        elif model_config.model_key.startswith('inception'):
-            model = model_func(pretrained=model_config.pretrained, aux_logits=False)    
-        else:
-            model = model_func(pretrained=model_config.pretrained)
-    else:
-        # If it's a module, we need to get the generating function
-        model = getattr(model_func, model_config.model_key)(pretrained=model_config.pretrained)
+    print("=> initializing model '{}'".format(model_config.model_key))
     
     try:
-        # Load checkpoint if available
-        checkpoint_path, checkpoint_found = actionTracker.get_checkpoint_path(model_config)
-        if checkpoint_found:
+        # Get the model function or class
+        model_func = models.__dict__[model_config.model_key]
+        
+        # Get checkpoint path and pretrained status
+        checkpoint_path, pretrained  = actionTracker.get_checkpoint_path(model_config)
+
+        # Initialize the model from scratch
+        if callable(model_func):
+            if model_config.model_key == 'googlenet' or model_config.model_key.startswith('inception'):
+                model = model_func(pretrained=False, aux_logits=False)
+            else:
+                model = model_func(pretrained=False)
+        else:
+            # If it's a module, we need to get the generating function
+            model = getattr(model_func, model_config.model_key)(pretrained=False)
+
+        # Load weights based on the conditions
+        if checkpoint_path:
             print("Loading checkpoint from:", checkpoint_path)
-            checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint['state_dict'])
+            model = torch.load(checkpoint_path)
+            # model.load_state_dict(checkpoint['state_dict'])
             print("Model loaded from checkpoint:", checkpoint_path)
         else:
-            print("No checkpoint found. Using pre-trained or newly initialized weights.")
-
-        # Modify the final layer
-        if model_config.model_key.startswith('squeezenet'):
-            # SqueezeNet-specific modification
-            model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
-            model.num_classes = len(dataset.classes)
-        elif hasattr(model, 'fc'):
-            num_ftrs = model.fc.in_features
-            model.fc = nn.Linear(num_ftrs, len(dataset.classes))
-        elif hasattr(model, 'classifier'):
-            if isinstance(model.classifier, nn.Linear):
-                # For models like DenseNet where classifier is a single Linear layer
-                num_ftrs = model.classifier.in_features
-                model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
-            elif isinstance(model.classifier, nn.Sequential):
-                # For models where classifier is a Sequential module
-                num_ftrs = model.classifier[-1].in_features
-                model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+            if pretrained:
+                print("Loading pre-trained weights")
+                if callable(model_func):
+                    if model_config.model_key == 'googlenet' or model_config.model_key.startswith('inception'):
+                        model = model_func(pretrained=True, aux_logits=False)
+                    else:
+                        model = model_func(pretrained=True)
+                else:
+                    model = getattr(model_func, model_config.model_key)(pretrained=True)
             else:
-                raise AttributeError("Unexpected classifier structure")
-        else:
-            # For models with non-standard final layer structures
-            if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
-                # This structure is common in some ResNet variants
-                num_ftrs = model.last_linear.in_features
-                model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
-            else:
-                raise AttributeError("Model structure not recognized")
+                print("Initializing model from scratch")
+            # The model is already initialized from scratch, so we don't need to do anything here
 
-        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Initial Model has been loaded')
+            # Modify the final layer (keep this part unchanged)
+            if model_config.model_key.startswith('squeezenet'):
+                # SqueezeNet-specific modification
+                model.classifier[1] = nn.Conv2d(512, len(dataset.classes), kernel_size=(1,1), stride=(1,1))
+                model.num_classes = len(dataset.classes)
+            elif hasattr(model, 'fc'):
+                num_ftrs = model.fc.in_features
+                model.fc = nn.Linear(num_ftrs, len(dataset.classes))
+            elif hasattr(model, 'classifier'):
+                if isinstance(model.classifier, nn.Linear):
+                    # For models like DenseNet where classifier is a single Linear layer
+                    num_ftrs = model.classifier.in_features
+                    model.classifier = nn.Linear(num_ftrs, len(dataset.classes))
+                elif isinstance(model.classifier, nn.Sequential):
+                    # For models where classifier is a Sequential module
+                    num_ftrs = model.classifier[-1].in_features
+                    model.classifier[-1] = nn.Linear(num_ftrs, len(dataset.classes))
+                else:
+                    raise AttributeError("Unexpected classifier structure")
+            else:
+                # For models with non-standard final layer structures
+                if hasattr(model, 'avgpool') and hasattr(model, 'last_linear'):
+                    # This structure is common in some ResNet variants
+                    num_ftrs = model.last_linear.in_features
+                    model.last_linear = nn.Linear(num_ftrs, len(dataset.classes))
+                else:
+                    raise AttributeError("Model structure not recognized")
+
+        actionTracker.update_status('MDL_TRN_MDL', 'OK', 'Model has been loaded')
         
         print(model)
+    
         
     except Exception as e:
         print(f"Error in loading model: {str(e)}")
