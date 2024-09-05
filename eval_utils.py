@@ -31,6 +31,8 @@ from ultralytics.utils.checks import check_requirements
 
 def setup_tensorrt():
     check_requirements("tensorrt", "pycuda")
+    import tensorrt as trt
+    import pycuda.driver as cuda
     
 def allocate_buffers(engine):
     # Determine dimensions and create page-locked memory buffers (i.e., pinned memory)
