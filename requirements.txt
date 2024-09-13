@@ -42,3 +42,4 @@ openvino
 pycocotools
 bson
 ultralytics
+matrice
