@@ -457,11 +457,17 @@ def setup_optimizer(model, model_config):
         optimizer = torch.optim.RMSprop(
             model.parameters(), lr=model_config.learning_rate, momentum=model_config.momentum, weight_decay=model_config.weight_decay, eps=0.0316, alpha=0.9
         )
+    elif opt_name.lower() == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=model_config.learning_rate,
+            weight_decay=model_config.weight_decay,
+        )
     elif opt_name == "adamw":
         print("Entering block 3")
         optimizer = torch.optim.AdamW(model.parameters(), lr=model_config.learning_rate, weight_decay=model_config.weight_decay)
     else:
-        raise RuntimeError(f"Invalid optimizer {model_config.optimizer}. Only SGD, RMSprop and AdamW are supported.")
+        raise RuntimeError(f"Invalid optimizer {model_config.optimizer}. Only SGD, RMSprop Adam and AdamW are supported.")
     
     
     print(optimizer)
