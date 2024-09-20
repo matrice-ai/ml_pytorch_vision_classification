@@ -27,7 +27,7 @@ def load_model(actionTracker):
         engine_data = f.read()
         engine = runtime.deserialize_cuda_engine(engine_data)
     if not engine:
-      print(f"Failed to load the engine: {engine}")
+        print(f"Failed to load the engine: {engine}")
     # Create a TensorRT context
     context = engine.create_execution_context()
     buffers = allocate_buffers(engine)
